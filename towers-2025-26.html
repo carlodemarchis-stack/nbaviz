@@ -146,11 +146,11 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
 <div id="tip"></div>
 
 <div id="ctlbar">
-  <button class="ic" title="Back to game 1 (Home)" onclick="setG(1)"><svg viewBox="0 0 24 24"><path d="M19 5v14M15 12 8 6v12z"/></svg></button>
+  <button class="ic" title="Restart (Home)" onclick="setG(1)"><svg viewBox="0 0 24 24"><path d="M2 5v6h6"/><path d="M4.6 15.5a8.5 8.5 0 1 0 2-8.8L2 11"/></svg></button>
   <button class="ic" title="Previous game (←)" onclick="setG(G-1)"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
   <button class="ic" id="playb" title="Play the season (space)" onclick="togglePlay()"><svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg></button>
   <button class="ic" title="Next game (→)" onclick="setG(G+1)"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-  <button class="ic" title="Whole season (End)" onclick="setG(MAXG)"><svg viewBox="0 0 24 24"><path d="M5 5v14M9 6l7 6-7 6z"/></svg></button>
+  <button class="ic" title="Whole season (End)" onclick="setG(MAXG)"><svg viewBox="0 0 24 24"><path d="M7 6l8 6-8 6z"/><path d="M18 5v14"/></svg></button>
   <input type="range" id="slider" min="1" max="82" value="82" aria-label="Game number">
   <div id="gno"></div>
   <button class="ic" title="More sports experiences" onclick="openMod('mmodal')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
