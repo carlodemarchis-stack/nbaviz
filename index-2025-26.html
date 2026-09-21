@@ -285,9 +285,14 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
       <li><b>Team cards</b> — the curve is the <b>season arc</b>: games above or below
         .500 after every game, so a good season climbs and a bad one sinks. Ticks beneath
         are the individual results.</li>
-      <li><b>Player cards</b> — the bars are points scored in each game, in order, with
-        the season average as a line. Players are ordered by <b>total points scored</b>,
+      <li><b>Player cards</b> — the bars are points scored in each game, in order.
+        <b style="color:var(--win)">Green</b> is a night at or above his own season
+        average, <b style="color:var(--loss)">red</b> is below it, and
+        <b style="color:var(--gold)">gold</b> is his best night of the year. The dashed
+        line is the average itself. Players are ordered by <b>total points scored</b>,
         so availability counts as well as scoring.</li>
+      <li>The <b>shot chart</b> bins every shot he took into 1.6ft cells: the dot is
+        bigger where he shot more often, and warmer where more of them went in.</li>
       <li>The <b>NBA Cup Championship</b> does not count toward a team's record, so it
         sits outside the W-L but is marked on the card.</li>
     </ul>
@@ -408,23 +413,35 @@ function logSvg(p){
   const W = 1000, H = 150, max = Math.max(...L, 10);
   const bw = W / L.length;
   const avg = p.ppg;
+  // Three states, so the line does the reading for you: a quiet night is red, a night
+  // at or above his own average is green, and his best of the season is gold. Ties on
+  // the high all go gold -- there can legitimately be more than one.
+  let below = 0, above = 0, best = 0;
   const bars = L.map((v, i) => {
     const h = v / max * H;
-    const hot = v >= p.highs.pts;
+    const top = v >= p.highs.pts;
+    const up = v >= avg;
+    if (top) best++; else if (up) above++; else below++;
+    const fill = top ? 'var(--gold)' : up ? 'var(--win)' : 'var(--loss)';
     return `<rect x="${(i*bw).toFixed(2)}" y="${(H-h).toFixed(1)}"
       width="${Math.max(1.2, bw-.8).toFixed(2)}" height="${h.toFixed(1)}" rx="1.5"
-      fill="${hot ? 'var(--gold)' : 'var(--acc)'}" opacity="${hot ? 1 : .78}"/>`;
+      fill="${fill}" opacity="${top ? 1 : .82}"/>`;
   }).join('');
   const ay = H - avg / max * H;
   return `<svg class="log" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
     ${bars}
     <line x1="0" y1="${ay.toFixed(1)}" x2="${W}" y2="${ay.toFixed(1)}"
-      stroke="rgba(232,236,245,.55)" stroke-width="1.1" stroke-dasharray="5 4"
+      stroke="rgba(232,236,245,.6)" stroke-width="1.1" stroke-dasharray="5 4"
       vector-effect="non-scaling-stroke"/>
   </svg>
-  <div class="arclab"><span>game 1</span>
-    <span>average ${avg} · high <b style="color:var(--gold)">${p.highs.pts}</b></span>
-    <span>game ${L.length}</span></div>`;
+  <div class="mixlab" style="margin-top:5px">
+    <span><i class="dot" style="background:var(--win)"></i>at or above ${avg}
+      <b>${above + best}</b></span>
+    <span><i class="dot" style="background:var(--loss)"></i>below <b>${below}</b></span>
+    <span><i class="dot" style="background:var(--gold)"></i>best night
+      <b>${p.highs.pts}</b></span>
+    <span style="margin-left:auto;color:var(--dim)">game 1 → ${L.length}</span>
+  </div>`;
 }
 
 /* Every shot of the season, binned to a 32x32 grid of 1.6ft cells.
