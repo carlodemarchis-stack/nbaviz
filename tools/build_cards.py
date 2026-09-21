@@ -17,7 +17,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, "..", "data")
 
 PLAYER_CARDS = 100         # the 100 biggest scorers — about 46% of all points in the league
-BIG_NIGHTS = 100           # the 100 biggest individual scoring games, league-wide
+BIG_NIGHTS = 100           # the 100 biggest individual scoring PERFORMANCES, league-wide
+                           # -- one row per player per game, so two players from the same
+                           # game can both make it. NOT the highest-scoring games.
 ROUND_ORDER = ["1st Round", "Semifinals", "Conference Finals", "NBA Finals"]
 
 

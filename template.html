@@ -952,7 +952,7 @@ function nightTip(o){
 
 function nightsCard(){
   const N = D.nights || [];
-  if (!N.length) return noPlayers('the biggest nights', 'The 100 biggest scoring games');
+  if (!N.length) return noPlayers('the biggest nights', 'The 100 biggest scoring performances');
 
   const max = Math.ceil(N[0].pts / 10) * 10 + 5;     // headroom above the best night
   const cut = N[N.length - 1].pts;
@@ -980,10 +980,12 @@ function nightsCard(){
   return `<div class="in">
     <div class="kick">Chart · the biggest nights</div>
     <h2 style="font-size:clamp(19px,2.2vw,29px);font-weight:700;letter-spacing:-.02em">
-      The 100 biggest scoring games</h2>
-    <p style="font-size:12px;color:var(--dim);max-width:92ch">Every individual scoring
-      game of ${SEASON}, league-wide, ranked — so one player can appear many times.
-      Each column is one night, its height the points, its colour the team he played for.
+      The 100 biggest scoring performances</h2>
+    <p style="font-size:12px;color:var(--dim);max-width:92ch">This ranks performances, not
+      games: every individual scoring night of ${SEASON}, league-wide. One player can
+      appear many times, and two players from the same game can both be here — one of
+      them the man he was playing against. Each column is one performance, its height the
+      points, its colour the team he played for.
       Hover or tap a column for the game. It took <b style="color:var(--ink)">${cut}</b> points
       to get here${tied > inList ? ` — ${tied} nights finished on exactly that, so the last
       ${inList} places went to the earliest of them` : ''}.</p>
@@ -1216,7 +1218,7 @@ const INDEX = CARDS.map((c,i) => {
   else { s = {race:'scoring race points leaders chart',
               ladder:'ladder standings seeds table chart',
               volume:'shot diet attempts volume chart',
-              nights:'biggest nights best games high scoring 100 chart'}[c.kind];
+              nights:'biggest nights best individual performances players high scoring 100 chart'}[c.kind];
          sub = 'chart'; }
   const group = c.kind === 'team' ? 'Teams'
               : c.kind === 'player' ? 'Players'
