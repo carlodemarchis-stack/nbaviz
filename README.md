@@ -157,6 +157,13 @@ and that all 6,908 game-log pointers resolve to a game played on the right date.
 
 ## Design
 
+**Two palettes that must not collide.** The shot chart's cold→hot ramp is steel blue →
+grey → red. The shot-type trio (`--two` violet `#7a5af5`, `--three` teal `#2fd4d0`, `--ft`
+pink `#e879c4`) used to be *exactly* those three hues, so one card said blue-grey-red
+twice meaning two different things. The trio now clears the ramp, the win green, the loss
+red and the best-night gold by at least 31° of hue, and sits 67–140° apart internally.
+Anything new about where points came from uses those three variables.
+
 House style: `--bg:#070910`, Helvetica 300/700, glass panels, radius 20. Accent
 **`--acc:#e0453f`** (NBA red — distinct from F1 `#00d7b6`, tennis `#f2c14e`, golf
 `#f2952e`, NFL `#4d94e0`). Team colours are lifted toward readability when near-black

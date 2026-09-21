@@ -13,6 +13,12 @@
   --line:rgba(150,166,205,.14);
   --acc:#e0453f;              /* NBA red — distinct from F1 teal, tennis amber, golf orange */
   --gold:#f0c24a; --win:#43c07a; --loss:#e0554a;
+  /* Where the points came from: two / three / free throw. These deliberately share NO
+     hue with the shot chart's cold->hot ramp (steel blue -> grey -> red), which is what
+     they used to be drawn in -- the same three colours meaning two different things on
+     one card. They also stay clear of the win green, loss red and best-night gold.
+     Ordered dark to light, which happens to match how much of a season each one is. */
+  --two:#7a5af5; --three:#2fd4d0; --ft:#e879c4;
   --bar:46px; --ctl:54px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -728,8 +734,8 @@ function logSvg(p, m){
   // Points are stacked by WHERE they came from, in the same red/blue/grey as the mix bar
   // above. Rebounds and assists have no such split, so they get the encoding points had
   // to give up: green at or above the average, red below, gold for the season high.
-  const MIX = [['from twos', 'var(--acc)'], ['from threes', '#5b8dd9'],
-               ['free throws', '#9aa6bd']];
+  const MIX = [['from twos', 'var(--two)'], ['from threes', 'var(--three)'],
+               ['free throws', 'var(--ft)']];
   const stacked = (m === 'pts' && LOGMODE === 'split');
   let above = 0, over = 0;
   const bars = CAL.map((slot, c) => {
@@ -891,11 +897,11 @@ function mixBar(p){
   const three = p.tpm * 3, ft = p.ftm, two = Math.max(0, p.pts - three - ft);
   const tot = Math.max(1, two + three + ft);
   const seg = (v, c) => `<i style="width:${(v/tot*100).toFixed(2)}%;background:${c}"></i>`;
-  return `<div class="mix">${seg(two,'var(--acc)')}${seg(three,'#5b8dd9')}${seg(ft,'#9aa6bd')}</div>
+  return `<div class="mix">${seg(two,'var(--two)')}${seg(three,'var(--three)')}${seg(ft,'var(--ft)')}</div>
   <div class="mixlab">
-    <span><i class="dot" style="background:var(--acc)"></i>2PT <b>${two}</b></span>
-    <span><i class="dot" style="background:#5b8dd9"></i>3PT <b>${three}</b> (${p.tpm}×3)</span>
-    <span><i class="dot" style="background:#9aa6bd"></i>FT <b>${ft}</b></span>
+    <span><i class="dot" style="background:var(--two)"></i>2PT <b>${two}</b></span>
+    <span><i class="dot" style="background:var(--three)"></i>3PT <b>${three}</b> (${p.tpm}×3)</span>
+    <span><i class="dot" style="background:var(--ft)"></i>FT <b>${ft}</b></span>
   </div>`;
 }
 
@@ -1047,11 +1053,11 @@ function playerCard(p){
           <div><div class="v">${p.apg}</div><div class="k">Assists avg</div></div>
         </div></div>
         <div class="box"><div class="kv">
-          <div><div class="v vg">${pie(p.fg,'var(--acc)')}<span>${p.fg}<small>%</small></span></div>
+          <div><div class="v vg">${pie(p.fg,'var(--two)')}<span>${p.fg}<small>%</small></span></div>
             <div class="k">Field goals</div></div>
-          <div><div class="v vg">${pie(p.tp,'#5b8dd9')}<span>${p.tp}<small>%</small></span></div>
+          <div><div class="v vg">${pie(p.tp,'var(--three)')}<span>${p.tp}<small>%</small></span></div>
             <div class="k">Three point</div></div>
-          <div><div class="v vg">${pie(p.ft,'#9aa6bd')}<span>${p.ft}<small>%</small></span></div>
+          <div><div class="v vg">${pie(p.ft,'var(--ft)')}<span>${p.ft}<small>%</small></span></div>
             <div class="k">Free throws</div></div>
           <div><div class="v">${p.dd}</div><div class="k">Double-doubles</div></div>
           <div><div class="v">${p.td}</div><div class="k">Triple-doubles</div></div>
@@ -1182,7 +1188,7 @@ function nightTip(o){
     `<div class="trow">${o.fgm}-${o.fga} FG · ${o.tpm}-${o.tpa} 3PT ·
       ${o.ftm}-${o.fta} FT</div>`) +
     (o.mix ? `<div class="trow">${o.mix.map((v, n) =>
-      `<i class="dot" style="background:${['var(--acc)','#5b8dd9','#9aa6bd'][n]}"></i>${v}`
+      `<i class="dot" style="background:${['var(--two)','var(--three)','var(--ft)'][n]}"></i>${v}`
       ).join(' ')} <span class="tdim">from twos / threes / the line</span></div>` : '') +
     `<div class="tdim">${o.reb} reb · ${o.ast} ast · ${o.min} min</div>`;
 }
@@ -1257,15 +1263,15 @@ function volumeCard(){
         <span class="cbar" style="background:none">
           <span style="position:absolute;inset:0 auto 0 0;width:${w.toFixed(1)}%;
             display:flex;border-radius:5px;overflow:hidden">
-            ${part(two,'var(--acc)')}${part(three,'#5b8dd9')}${part(ft,'#9aa6bd')}</span>
+            ${part(two,'var(--two)')}${part(three,'var(--three)')}${part(ft,'var(--ft)')}</span>
           <span style="left:9px">${esc(p.name)}</span></span>
         <span style="text-align:right"><b>${tot}</b></span></div>`;
     }).join('')}
     </div>
     <div class="mixlab" style="margin-top:2px">
-      <span><i class="dot" style="background:var(--acc)"></i>two-point attempts</span>
-      <span><i class="dot" style="background:#5b8dd9"></i>three-point attempts</span>
-      <span><i class="dot" style="background:#9aa6bd"></i>free throws</span></div>
+      <span><i class="dot" style="background:var(--two)"></i>two-point attempts</span>
+      <span><i class="dot" style="background:var(--three)"></i>three-point attempts</span>
+      <span><i class="dot" style="background:var(--ft)"></i>free throws</span></div>
   </div>`;
 }
 
