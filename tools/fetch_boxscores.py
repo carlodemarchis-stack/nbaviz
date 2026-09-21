@@ -88,13 +88,23 @@ def extract(gid, d):
                 fgm, fga = split(g("FG"))
                 tpm, tpa = split(g("3PT"))
                 ftm, fta = split(g("FT"))
-                rows.append([
+                # THE signal for "was he actually in this game": the RAW minutes string.
+                # "--" means he never entered; a numeric "0" means he did but logged
+                # under a minute -- Mikal Bridges has exactly that, with one personal
+                # foul to prove it, and ESPN counts it as a game played. num() turns
+                # both into 0, so testing the parsed value cannot tell them apart:
+                # dropping all zero-minute rows cost Bridges a game off his 82-game
+                # season, and keeping them gave Vucevic a 65th game he never played.
+                if not str(g("MIN")).strip().isdigit():
+                    continue
+                line = [
                     pid, num(g("MIN")), num(g("PTS")),
                     fgm, fga, tpm, tpa, ftm, fta,
                     num(g("REB")), num(g("AST")), num(g("TO")),
                     num(g("STL")), num(g("BLK")), num(g("+/-")),
                     1 if a.get("starter") else 0,
-                ])
+                ]
+                rows.append(line)
         out["teams"][ab] = rows
     return out
 

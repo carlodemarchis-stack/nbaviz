@@ -16,7 +16,7 @@ from collections import defaultdict
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, "..", "data")
 
-PLAYER_CARDS = 60          # how many player cards the film carries
+PLAYER_CARDS = 100         # the 100 biggest scorers — about 46% of all points in the league
 ROUND_ORDER = ["1st Round", "Semifinals", "Conference Finals", "NBA Finals"]
 
 
