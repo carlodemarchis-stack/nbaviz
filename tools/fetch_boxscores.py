@@ -59,7 +59,7 @@ def num(v):
 
 
 def extract(gid, d):
-    """-> {'g':gid, 'teams':{ABBR:[[pid,min,pts,fgm,fga,tpm,tpa,ftm,fta,reb,ast,to,stl,blk,pm,started],...]}}"""
+    """-> {'g':gid, 'teams':{ABBR:[[pid,min,pts,fgm,fga,tpm,tpa,ftm,fta,reb,ast,to,stl,blk,pm,started,jersey],...]}}"""
     out = {"g": gid, "teams": {}}
     for block in d.get("boxscore", {}).get("players", []):
         ab = block["team"]["abbreviation"]
@@ -103,6 +103,12 @@ def extract(gid, d):
                     num(g("REB")), num(g("AST")), num(g("TO")),
                     num(g("STL")), num(g("BLK")), num(g("+/-")),
                     1 if a.get("starter") else 0,
+                    # The number he wore THAT NIGHT. ESPN's athlete endpoint serves the
+                    # number he wears NOW -- same trap as the roster -- and for a player
+                    # who is unsigned at fetch time it serves none at all, which left 10
+                    # of the 100 carded players with no number. The box score has one for
+                    # every athlete in it.
+                    str((a.get("athlete") or {}).get("jersey") or ""),
                 ]
                 rows.append(line)
         out["teams"][ab] = rows

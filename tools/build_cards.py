@@ -11,7 +11,7 @@ import gzip
 import json
 import os
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, "..", "data")
@@ -181,6 +181,25 @@ def big_nights(sched, box, uncounted, deck, n=BIG_NIGHTS):
     return top
 
 
+def jersey_of(p, worn):
+    """The number he actually wore, from the box scores, for the team he played most for.
+
+    ESPN's athlete record carries the number he wears NOW, and none at all for a player
+    who is unsigned when it is fetched -- that left 10 of the 100 carded players with no
+    number on the card. Falls back to the ESPN value, then to nothing.
+    """
+    byteam = worn.get(p["id"]) or {}
+    for team in [p.get("team")] + [t["t"] for t in (p.get("teams") or [])]:
+        if team and byteam.get(team):
+            return byteam[team].most_common(1)[0][0]
+    if byteam:
+        pool = Counter()
+        for c in byteam.values():
+            pool += c
+        return pool.most_common(1)[0][0]
+    return p.get("jersey")
+
+
 def main(label):
     teams = load("teams.json")
     sched = load(f"schedule-{label}.json")
@@ -192,6 +211,7 @@ def main(label):
 
     # --- per player per team aggregates, straight from the box scores
     agg = defaultdict(lambda: defaultdict(lambda: [0] * 6))   # pid -> team -> tallies
+    worn = defaultdict(lambda: defaultdict(Counter))          # pid -> team -> jersey tally
     plog = defaultdict(list)                                  # pid -> [(date, pts, ...)]
     date_of, uncounted, gidx = {}, set(), {}
     for ab, gs in sched.items():
@@ -215,6 +235,8 @@ def main(label):
         for ab, rows in blocks.items():
             for r in rows:
                 pid, mins, pts, fgm, fga, tpm, tpa, ftm, fta, reb, ast = r[:11]
+                if len(r) > 16 and r[16]:
+                    worn[pid][ab][r[16]] += 1
                 a = agg[pid][ab]
                 a[0] += 1
                 a[1] += pts
@@ -304,7 +326,7 @@ def main(label):
             "rank": p["rank"], "id": p["id"], "nbaId": p["nbaId"],
             "name": p["name"], "short": p["short"], "team": p["team"],
             "teams": p["teams"], "pos": p["pos"], "age": p["age"],
-            "jersey": p["jersey"], "height": p["height"], "weight": p["weight"],
+            "jersey": jersey_of(p, worn), "height": p["height"], "weight": p["weight"],
             "college": p["college"], "debut": p["debut"],
             "gp": int(rs.get("gamesPlayed", 0)), "pts": int(rs["points"]),
             "ppg": r1(rs.get("avgPoints", 0)), "rpg": r1(rs.get("avgRebounds", 0)),

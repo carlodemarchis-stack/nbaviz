@@ -70,10 +70,15 @@ Each of these produced plausible-looking wrong output once.
 4. **ESPN has no season-accurate roster.** Every roster endpoint returns the *current*
    roster, which after the 2026 offseason put Jaylen Brown on Philadelphia and Paul George
    on Boston beside their 2025-26 stats. Teams are derived from box scores instead.
-5. **`athlete.active` does not mean "played in this game"** — it means "on the current
+5. **The jersey number is season-accurate only from the box scores.** ESPN's athlete
+   endpoint serves the number a player wears *now* — the same trap as the roster — and
+   serves none at all for anyone unsigned at fetch time. That left 10 of the 100 carded
+   players with no number and **6 with the wrong one**: Giannis showed as 7, having worn
+   34 in 2025-26. Every athlete in a box score carries the number he wore that night.
+6. **`athlete.active` does not mean "played in this game"** — it means "on the current
    roster". Huerter is `active:false` in a game he played 32 minutes of. Filtering on it
    deleted real players from 22 games.
-6. **Known upstream gap:** 7 Chicago games where ESPN omits a player's line entirely (the
+7. **Known upstream gap:** 7 Chicago games where ESPN omits a player's line entirely (the
    listed players total 230 of the required 240 minutes). Allowlisted in `validate.py`;
    the towers are unaffected because they use final scores.
 
@@ -117,8 +122,10 @@ and that all 6,908 game-log pointers resolve to a game played on the right date.
 - **The player's number, team and bio are ONE line**, truncated rather than wrapped. A
   traded player shows his split (`LAC 44 → CLE 26`) instead of the current team's full
   name, which is what used to push five of the hundred past the end of the line.
-- **Jersey big on the right, rank half-size on the left, captioned "by points"** — a bare
-  number reads as a jersey, so the rank has to say what it is.
+- **Jersey big on the right in the team's colour** (through `winColor()`, so a near-black
+  primary is lifted; opacity rather than an alpha, because winColor returns `#rrggbb`,
+  `rgb()` or a `var()`), rank half-size on the left captioned "by points" — a bare number
+  reads as a jersey, so the rank has to say what it is.
 - **The points chart has a Split / Avg switch** beside its title: Split stacks each column
   by 2PT / 3PT / FT, Avg colours the whole bar green at or above the average, red below,
   gold for the best night. Rebounds and assists have no split, so they are always drawn
