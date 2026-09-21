@@ -217,12 +217,19 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
 #jq{width:100%;background:var(--pan2);border:1px solid var(--line);border-radius:12px;
   padding:11px 13px;color:var(--ink);font:inherit;font-size:13px;margin-bottom:10px}
 #jq:focus{outline:none;border-color:var(--acc)}
-#jlist{max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:2px}
-.jrow{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;
-  padding:7px 9px;border-radius:9px;cursor:pointer;font-size:12.5px}
+#jmodal .mbox{width:min(1040px,96vw)}
+#jlist{max-height:62vh;overflow:auto}
+.jsec{margin-bottom:14px}
+.jsechd{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
+  border-bottom:1px solid var(--line);padding-bottom:5px;margin-bottom:6px}
+.jsechd span{color:var(--ink);opacity:.5;margin-left:6px}
+.jgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:2px 10px}
+.jrow{display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:baseline;
+  padding:5px 8px;border-radius:8px;cursor:pointer;font-size:12.5px;min-width:0}
 .jrow:hover,.jrow.sel{background:var(--pan)}
-.jrow .jn{color:var(--dim);font-variant-numeric:tabular-nums;text-align:right}
-.jrow .jt{color:var(--dim);font-size:10.5px}
+.jrow .jn{color:var(--dim);font-variant-numeric:tabular-nums;text-align:right;font-size:11px}
+.jrow .jl{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jrow .jt{color:var(--dim);font-size:10.5px;margin-left:5px}
 .applist{display:flex;flex-direction:column;gap:3px}
 .approw{display:grid;grid-template-columns:12px 1fr auto;gap:11px;align-items:center;
   padding:9px 10px;border-radius:10px;text-decoration:none;color:var(--ink);font-size:12.5px}
@@ -958,31 +965,46 @@ function closeMods(){ document.querySelectorAll('.mod').forEach(m => m.classList
 /* ---------- jump ---------- */
 const INDEX = CARDS.map((c,i) => {
   let s = '', sub = '';
+  let short = null;
   if (c.kind === 'team') { s = [c.t.name, c.t.city, c.t.nick, c.t.abbr, c.t.conf, c.t.div].join(' ');
-    sub = `${c.t.w}-${c.t.l}`; }
+    short = c.t.name; sub = `${c.t.w}-${c.t.l}`; }
   else if (c.kind === 'player') { s = [c.p.name, c.p.team, c.p.college, c.p.pos].join(' ');
-    sub = `${c.p.ppg} ppg · ${c.p.team}`; }
+    short = c.p.name; sub = `${c.p.team} · ${c.p.ppg}`; }
   else if (c.kind === 'cover') { s = 'cover start title'; sub = 'the opening card'; }
   else { s = {race:'scoring race points leaders chart',
               ladder:'ladder standings seeds table chart',
               volume:'shot diet attempts volume chart'}[c.kind]; sub = 'chart'; }
-  return {i, label: label(i), sub, key: s.toLowerCase()};
+  const group = c.kind === 'team' ? 'Teams'
+              : c.kind === 'player' ? 'Players'
+              : c.kind === 'cover' ? 'Start' : 'Charts';
+  return {i, group, label: short || label(i), sub, key: s.toLowerCase()};
 });
+const JGROUPS = ['Start', 'Teams', 'Players', 'Charts'];
 let jsel = 0;
 function drawJump(q){
   q = q.trim().toLowerCase();
   const n = parseInt(q, 10);
-  let rows = !q ? INDEX
+  const rows = !q ? INDEX
     : (String(n) === q && n >= 1 && n <= CARDS.length) ? [INDEX[n-1]]
     : INDEX.filter(r => q.split(/\s+/).every(w => r.key.includes(w)));
-  rows = rows.slice(0, 60);
   jsel = 0;
-  document.getElementById('jlist').innerHTML = rows.map((r,k) =>
-    `<div class="jrow ${k===0?'sel':''}" data-i="${r.i}" onclick="go(${r.i});closeMods()">
-      <span class="jn">${r.i+1}</span>
-      <span>${esc(r.label)}<span class="jt"> ${esc(r.sub)}</span></span>
-      <span class="jn">↵</span></div>`).join('')
-    || '<p>Nothing matches.</p>';
+  // Grouped and multi-column: 134 cards in one flat list is a scroll, and the groups
+  // are how you actually think about the deck. Rows stay in INDEX order inside each
+  // group so the arrow keys, which walk the DOM, still move sensibly.
+  let k = 0, html = '';
+  for (const g of JGROUPS){
+    const inGroup = rows.filter(r => r.group === g);
+    if (!inGroup.length) continue;
+    html += `<div class="jsec"><div class="jsechd">${g}
+      <span>${inGroup.length}</span></div><div class="jgrid">`
+      + inGroup.map(r => `<div class="jrow ${k++ === 0 ? 'sel' : ''}" data-i="${r.i}"
+          onclick="go(${r.i});closeMods()">
+          <span class="jn">${r.i+1}</span>
+          <span class="jl">${esc(r.label)}<span class="jt">${esc(r.sub)}</span></span>
+        </div>`).join('')
+      + '</div></div>';
+  }
+  document.getElementById('jlist').innerHTML = html || '<p>Nothing matches.</p>';
 }
 function openJump(){
   openMod('jmodal'); drawJump('');
