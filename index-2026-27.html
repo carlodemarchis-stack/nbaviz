@@ -660,13 +660,55 @@ const METRICS = {
 };
 const SCALE = {};   // filled on first use; D.players is fixed for the page
 
+/* Every game his team played while he was on it, not just the ones he appeared in --
+   so a 64-game season looks like a 64-game season, with holes. Derived here rather than
+   shipped: p.glog already says which team and which game each appearance was, and the
+   team's own fixture list is already in the payload for the team cards.
+
+   A traded player's calendar is his first team's games up to the day he first played for
+   the second, then the second's. The seven traded players in the deck all have clean,
+   non-overlapping spans, so there is no game that could belong to both. His calendar is
+   therefore not 82 -- two teams' schedules do not line up -- which is why the caption
+   counts it rather than assuming. Returns [{ti, gi, li}], li = -1 for a game he missed. */
+function calendar(p){
+  const g = p.glog || [];
+  if (!g.length) return [];
+  const firstAt = {}, order = [], played = {};
+  g.forEach((x, li) => {
+    if (!(x[0] in firstAt)) { firstAt[x[0]] = li; order.push(x[0]); }
+    played[x[0] + ':' + x[1]] = li;
+  });
+  const dateOf = (ti, gi) => {
+    const ab = ((p.teams || [])[ti] || {}).t;
+    const gm = ((TEAMS[ab] || {}).games || [])[gi];
+    return gm ? gm.date : '';
+  };
+  const out = [];
+  order.forEach((ti, n) => {
+    const ab = ((p.teams || [])[ti] || {}).t;
+    const games = (TEAMS[ab] || {}).games || [];
+    const from = n === 0 ? '' : dateOf(ti, g[firstAt[ti]][1]);
+    const to = n === order.length - 1 ? ''
+             : dateOf(order[n + 1], g[firstAt[order[n + 1]]][1]);
+    games.forEach((gm, gi) => {
+      if (gm.counts === false) return;          // the Cup final counts for nobody
+      if (from && gm.date < from) return;
+      if (to && gm.date >= to) return;
+      const li = played[ti + ':' + gi];
+      out.push({ti, gi, li: li === undefined ? -1 : li});
+    });
+  });
+  return out;
+}
+
 function logSvg(p, m){
   const M = METRICS[m] || METRICS.pts;
   const L = p.log || [];
   if (!L.length) return '';
+  const CAL = calendar(p);
   const CAP = SCALE[m] || (SCALE[m] = M.scale());
   const W = 1000, H = 150;
-  const bw = W / L.length;
+  const bw = W / CAL.length;
   const avg = M.avg(p), high = M.high(p);
   const y = v => H - Math.min(v, CAP) / CAP * H;
   const x = i => (i*bw).toFixed(2), w = Math.max(1.2, bw-.8).toFixed(2);
@@ -678,14 +720,19 @@ function logSvg(p, m){
                ['free throws', '#9aa6bd']];
   const stacked = (m === 'pts' && LOGMODE === 'split');
   let above = 0, over = 0;
-  const bars = L.map((_, i) => {
+  const bars = CAL.map((slot, c) => {
+    // A game he missed leaves a gap, with a faint tick on the baseline so the eye reads
+    // it as a hole rather than as accidental spacing.
+    if (slot.li < 0) return `<rect x="${x(c)}" y="${(H - 1.4).toFixed(1)}" width="${w}"
+      height="1.4" fill="rgba(150,166,205,.22)"/>`;
+    const i = slot.li;
     const v = M.val(p, i);
     if (v >= avg) above++;
     if (v > CAP) over++;
     let seg = '';
     if (!stacked){
       const yy = y(v);
-      seg = `<rect x="${x(i)}" y="${yy.toFixed(1)}" width="${w}"
+      seg = `<rect x="${x(c)}" y="${yy.toFixed(1)}" width="${w}"
         height="${Math.max(0.6, H - yy).toFixed(1)}" rx="1.5"
         fill="${v >= high ? 'var(--gold)' : v >= avg ? 'var(--win)' : 'var(--loss)'}"
         opacity="${v >= high ? 1 : .82}"/>`;
@@ -699,15 +746,15 @@ function logSvg(p, m){
       [Math.max(0, v - three - ft), three, ft].forEach((val, n) => {
         if (val <= 0) return;
         const y0 = y(acc * k), y1 = y((acc + val) * k);
-        seg += `<rect x="${x(i)}" y="${y1.toFixed(1)}" width="${w}"
+        seg += `<rect x="${x(c)}" y="${y1.toFixed(1)}" width="${w}"
           height="${Math.max(0.6, y0 - y1).toFixed(1)}" fill="${MIX[n][1]}"/>`;
         acc += val;
       });
       // The best night keeps its gold, as a cap rather than a whole bar it would recolour.
-      if (v >= high) seg += `<rect x="${x(i)}" y="${(v > CAP ? 3.4 : y(v)).toFixed(1)}"
+      if (v >= high) seg += `<rect x="${x(c)}" y="${(v > CAP ? 3.4 : y(v)).toFixed(1)}"
         width="${w}" height="3" fill="var(--gold)"/>`;
     }
-    if (v > CAP) seg += `<rect x="${x(i)}" y="0" width="${w}" height="3"
+    if (v > CAP) seg += `<rect x="${x(c)}" y="0" width="${w}" height="3"
       fill="var(--ink)"/>`;
     return seg;
   }).join('');
@@ -731,9 +778,11 @@ function logSvg(p, m){
          <b>${above}</b></span>
        <span><i class="dot" style="background:var(--loss)"></i>below
          <b>${L.length - above}</b></span>`;
+  const missed = CAL.length - L.length;
+  const gaps = missed ? ` · <b>${missed}</b> missed` : '';
   const tail = stacked
-    ? `<b>${above}</b> of ${L.length} at or above ${avg} · same 0–${CAP} scale on every card`
-    : `game 1 → ${L.length} · same 0–${CAP} scale on every card`;
+    ? `<b>${above}</b> of ${L.length} at or above ${avg}${gaps} · same 0–${CAP} scale on every card`
+    : `${L.length} of ${CAL.length} games played${gaps ? '' : ''} · same 0–${CAP} scale on every card`;
 
   return `<div class="arcbox loghook">${labels}
   <svg class="log" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
@@ -1312,22 +1361,36 @@ function logHover(e, box){
   const p = (CARDS[cards.indexOf(card)] || {}).p;
   if (!p || !p.log.length) return hideTip();
   const r = svg.getBoundingClientRect();
-  const i = Math.floor((e.clientX - r.left) / r.width * p.log.length);
-  if (i < 0 || i >= p.log.length) { clearHl(); return hideTip(); }
+  // The chart's columns are the CALENDAR, not the appearances, so the pointer maps to a
+  // calendar slot -- which may be a game he missed.
+  const CAL = calendar(p);
+  const c = Math.floor((e.clientX - r.left) / r.width * CAL.length);
+  if (c < 0 || c >= CAL.length) { clearHl(); return hideTip(); }
 
-  const bw = 1000 / p.log.length;
+  const bw = 1000 / CAL.length;
   hlEl = svg.querySelector('.loghl');
-  hlEl.setAttribute('x', (i * bw).toFixed(2));
+  hlEl.setAttribute('x', (c * bw).toFixed(2));
   hlEl.setAttribute('width', Math.max(1.2, bw - 0.8).toFixed(2));
 
+  const slot = CAL[c];
+  const ab = ((p.teams || [])[slot.ti] || {}).t || p.team;
+  const g = ((TEAMS[ab] || {}).games || [])[slot.gi];
+  if (!g) return hideTip();
+  const head = `<div class="tdim" style="font-size:10px;letter-spacing:.14em;
+      text-transform:uppercase">Game ${c + 1} of ${CAL.length}</div>`;
+  if (slot.li < 0){
+    return showTip(head +
+      `<div class="tnm" style="margin-top:4px">Did not play</div>
+       <div class="trow tdim">${ab} ${g.ha === 'H' ? 'vs' : '@'} ${g.opp} ·
+         <b style="color:${g.res === 'W' ? 'var(--win)' : 'var(--loss)'}">${g.res || '–'}
+         ${g.us}–${g.them}</b></div>
+       <div class="tdim">${WHEN(g.date)}</div>`, e.clientX, e.clientY);
+  }
   // The log carries points only; the rest of the night is a pointer into the team's
   // own games list, which the payload already ships for the team cards.
-  const [ti, gi, min, reb, ast, tpm, ftm] = (p.glog || [])[i] || [];
-  const ab = ((p.teams || [])[ti] || {}).t || p.team;
-  const g = ((TEAMS[ab] || {}).games || [])[gi];
-  if (!g) return hideTip();
-  showTip(`<div class="tdim" style="font-size:10px;letter-spacing:.14em;
-      text-transform:uppercase">Game ${i + 1} of ${p.log.length}</div>` +
+  const i = slot.li;
+  const [, , min, reb, ast, tpm, ftm] = (p.glog || [])[i] || [];
+  showTip(head +
     nightTip({pts: p.log[i], name: p.name, team: ab, opp: g.opp,
               h: g.ha === 'H', w: g.res === 'W', us: g.us, them: g.them,
               date: g.date, min, reb, ast,

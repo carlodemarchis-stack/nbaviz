@@ -131,6 +131,12 @@ and that all 6,908 game-log pointers resolve to a game played on the right date.
   by 2PT / 3PT / FT, Avg colours the whole bar green at or above the average, red below,
   gold for the best night. Rebounds and assists have no split, so they are always drawn
   the Avg way and the switch is hidden there.
+- **The game chart draws every game his team played while he was on it**, not just his
+  appearances — a missed game is a gap with a faint baseline tick. The calendar is derived
+  client-side (`calendar()`) from the `[team, game]` pointers plus the team fixture lists
+  the payload already ships, so it costs nothing. A traded player's calendar is his first
+  team's games up to the day he first played for the second, then the second's — so it is
+  **not** 82 (two schedules do not line up) and the caption counts it.
 - **The game chart has Points / Rebounds / Assists tabs**, each on its own deck-wide scale
   (99th percentile of season highs; 10s for points, 5s for rebounds and assists). Only the
   card you are looking at is re-rendered on a switch — redrawing all 100 charts is waste —
