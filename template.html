@@ -662,7 +662,14 @@ const METRICS = {
   ast: {name: 'assists', tab: 'Assists', avg: p => p.apg, high: p => p.highs.ast,
         val: (p, i) => ((p.glog || [])[i] || [])[4] || 0,
         scale: () => deckScale(p => p.highs.ast, 5, 10), step: 5},
+  // Minutes has no precomputed high in the payload -- it comes off the game log, which
+  // is already there. Step 10, because the axis runs to about 50 and a step of 5 would
+  // be ten gridlines.
+  min: {name: 'minutes played', tab: 'Minutes', avg: p => p.mpg, high: p => topMin(p),
+        val: (p, i) => ((p.glog || [])[i] || [])[2] || 0,
+        scale: () => deckScale(topMin, 5, 30), step: 10},
 };
+const topMin = p => (p.glog || []).reduce((m, g) => Math.max(m, g[2] || 0), 0);
 const SCALE = {};   // filled on first use; D.players is fixed for the page
 
 /* Every game his team played while he was on it, not just the ones he appeared in --
