@@ -95,7 +95,29 @@ b{font-weight:700}
   border:1px solid var(--line);border-radius:99px;padding:5px 12px;backdrop-filter:blur(8px)}
 #legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
 .empty{color:var(--dim);font-size:12.5px;padding:6px 4px 12px;line-height:1.55;max-width:96ch}
-@media (max-width:760px){ #legend{display:none} .lab{display:none} }
+#credit{color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;flex:0 1 auto;margin-left:6px}
+#credit a{color:var(--dim);text-decoration:none;border-bottom:1px solid var(--line)}
+#credit a:hover{color:var(--ink)}
+.mod{position:fixed;inset:0;z-index:60;background:rgba(4,6,12,.82);
+  backdrop-filter:blur(7px);display:none;place-items:center;padding:22px}
+.mod.on{display:grid}
+.mbox{width:min(720px,94vw);max-height:84vh;overflow:auto;background:#0d1019;
+  border:1px solid var(--line);border-radius:20px;padding:22px 24px}
+.mbox h3{font-size:17px;font-weight:700;margin-bottom:12px}
+.mbox p,.mbox li{font-size:12.5px;color:var(--dim);line-height:1.65}
+.mbox ul{margin:8px 0 8px 17px}
+kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--line);
+  border-radius:6px;padding:1px 6px;color:var(--ink)}
+.applist{display:flex;flex-direction:column;gap:3px}
+.approw{display:grid;grid-template-columns:12px 1fr auto;gap:11px;align-items:center;
+  padding:9px 10px;border-radius:10px;text-decoration:none;color:var(--ink);font-size:12.5px}
+.approw:hover{background:var(--pan)}
+.approw i{width:9px;height:9px;border-radius:99px}
+.approw em{font-style:normal;color:var(--dim);font-size:11px;display:block}
+@media (max-width:760px){ #legend{display:none} .lab{display:none} #credit{display:none}
+  #topbar{overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+  #topbar::-webkit-scrollbar{display:none} }
 </style>
 </head>
 <body>
@@ -110,6 +132,8 @@ b{font-weight:700}
   <div class="grow"></div>
   <span class="lab">Group</span><div class="seg" id="groups"></div>
   <span class="lab">Order</span><div class="seg" id="sorts"></div>
+  <div id="credit">Produced with passion by <b>Carlo De Marchis</b> ·
+    <a href="#" onclick="openMod('cmodal');return false">Credits</a></div>
 </div>
 
 <div id="legend">
@@ -122,11 +146,63 @@ b{font-weight:700}
 <div id="tip"></div>
 
 <div id="ctlbar">
-  <button class="ic" title="Back to game 1" onclick="setG(1)"><svg viewBox="0 0 24 24"><path d="M19 5v14M15 12 8 6v12z"/></svg></button>
-  <button class="ic" id="playb" title="Play the season" onclick="togglePlay()"><svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg></button>
-  <button class="ic" title="Whole season" onclick="setG(MAXG)"><svg viewBox="0 0 24 24"><path d="M5 5v14M9 12l7-6v12z" transform="scale(-1,1) translate(-24,0)"/></svg></button>
+  <button class="ic" title="Back to game 1 (Home)" onclick="setG(1)"><svg viewBox="0 0 24 24"><path d="M19 5v14M15 12 8 6v12z"/></svg></button>
+  <button class="ic" title="Previous game (←)" onclick="setG(G-1)"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <button class="ic" id="playb" title="Play the season (space)" onclick="togglePlay()"><svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg></button>
+  <button class="ic" title="Next game (→)" onclick="setG(G+1)"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+  <button class="ic" title="Whole season (End)" onclick="setG(MAXG)"><svg viewBox="0 0 24 24"><path d="M5 5v14M9 12 2 6v12z" transform="scale(-1,1) translate(-24,0)"/></svg></button>
   <input type="range" id="slider" min="1" max="82" value="82" aria-label="Game number">
   <div id="gno"></div>
+  <button class="ic" title="More sports experiences" onclick="openMod('mmodal')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button class="ic" title="Help (h)" onclick="openMod('hmodal')"><svg viewBox="0 0 24 24"><path d="M12 17h.01M9.1 9a3 3 0 1 1 4.2 2.7c-.8.4-1.3 1.1-1.3 2"/></svg></button>
+  <button class="ic" title="Fullscreen (f)" onclick="fs()"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 15v5h-5M15 4h5v5M9 20H4v-5"/></svg></button>
+</div>
+
+<div class="mod" id="hmodal" onclick="if(event.target===this)closeMods()">
+  <div class="mbox" onclick="event.stopPropagation()">
+    <h3>How to read this</h3>
+    <p>Every team's season as a <b>shape</b>. All 30 share one baseline:
+      <b>wins build upward, losses hang downward, and games still to play hang from
+      the ceiling.</b> A good season is literally tall and a bad one is literally deep,
+      so you read the league without parsing a single number.</p>
+    <ul>
+      <li>Every box is one game, and every box is the same height across the page —
+        the towers are to scale with each other.</li>
+      <li>The slider replays the season game by game, and the teams <b>re-sort live</b>
+        as records change.</li>
+      <li>The <b>NBA Cup Championship</b> does not count toward a team's record, so it
+        is not in these towers. It is on the team's card in the Film.</li>
+      <li>A team's colour is its own, except where the primary is near-black
+        (Brooklyn, San Antonio) and the secondary reads better.</li>
+    </ul>
+    <p><kbd>←</kbd> <kbd>→</kbd> step a game · <kbd>space</kbd> play ·
+      <kbd>Home</kbd> <kbd>End</kbd> ends · <kbd>f</kbd> fullscreen ·
+      <kbd>h</kbd> help · <kbd>Esc</kbd> close.</p>
+  </div>
+</div>
+
+<div class="mod" id="cmodal" onclick="if(event.target===this)closeMods()">
+  <div class="mbox" onclick="event.stopPropagation()">
+    <h3>Credits &amp; sources</h3>
+    <p>Built by <b>Carlo De Marchis</b> — <i>A Guy With A Scarf</i>. A showcase piece,
+      not a commercial product.</p>
+    <ul>
+      <li><b>Schedule and results</b> — ESPN's public API. Records reconciled against
+        the official standings for all 30 teams.</li>
+      <li><b>Crests</b> — official NBA artwork from cdn.nba.com.</li>
+      <li>The towers show the 82-game regular season only; playoffs live on the team
+        cards in the Film.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="mod" id="mmodal" onclick="if(event.target===this)closeMods()">
+  <div class="mbox" style="width:min(430px,94vw)" onclick="event.stopPropagation()">
+    <h3>More sports experiences</h3>
+    <div class="applist" id="applist"></div>
+    <p style="margin-top:12px"><a href="https://dataviz.aguywithascarf.com"
+      target="_blank" rel="noopener">See them all →</a></p>
+  </div>
 </div>
 
 <script>
@@ -290,6 +366,19 @@ function setG(n){
   G = Math.max(1, Math.min(MAXG, n));
   document.getElementById('slider').value = G;
   draw();
+  syncHash();
+}
+/* Standing rule in this family: a reload lands exactly where you were, never at the
+   start, and the address bar is always shareable. */
+function syncHash(){
+  const want = `#${group}/${sort}/${G}`;
+  if (location.hash !== want) history.replaceState(null, '', want);
+  PREF.set('game', G);
+}
+function readHash(){
+  const m = /^#([a-z]+)\/([a-z]+)\/(\d+)$/.exec(location.hash || '');
+  if (!m) return null;
+  return {group: m[1], sort: m[2], g: +m[3]};
 }
 document.getElementById('slider').max = MAXG;
 document.getElementById('slider').addEventListener('input', e => setG(+e.target.value));
@@ -326,6 +415,27 @@ document.getElementById('seasons').innerHTML = (D.seasons || [SEASON]).map(s =>
   s === SEASON ? `<span class="pill on">${s}</span>`
                : `<a class="pill" href="towers-${s}.html">${s}</a>`).join('');
 
+function fs(){
+  document.fullscreenElement ? document.exitFullscreen()
+    : document.documentElement.requestFullscreen().catch(()=>{});
+}
+function openMod(id){ closeMods(); document.getElementById(id).classList.add('on'); }
+function closeMods(){ document.querySelectorAll('.mod').forEach(m=>m.classList.remove('on')); }
+
+/* The family cross-link panel; every app's list leaves out itself. */
+const APPS = [
+  ['Formula 1','A season read lap by lap','#00d7b6','https://f1.aguywithascarf.com'],
+  ['Tennis','The season, one player at a time','#f2c14e','https://tennis.aguywithascarf.com'],
+  ['Football','Season towers, top 5 leagues','#2f9e58','https://top5.aguywithascarf.com'],
+  ['NFL','Wins up, losses down','#4d94e0','https://nfl.aguywithascarf.com'],
+  ['World Cup','Road to the Final','#3fbe72','https://worldcupbracket.aguywithascarf.com'],
+  ['PGA TOUR','Season Film','#57a34a','https://golf.aguywithascarf.com'],
+  ['Athletics','World Record Film','#d98a3d','https://athletics.aguywithascarf.com'],
+];
+document.getElementById('applist').innerHTML = APPS.map(a =>
+  `<a class="approw" href="${a[3]}" target="_blank" rel="noopener">
+    <i style="background:${a[2]}"></i><span>${a[0]}<em>${a[1]}</em></span><span>\u2197</span></a>`).join('');
+
 /* hover tooltip on a tower */
 const tip = document.getElementById('tip');
 document.getElementById('wrap').addEventListener('mousemove', e => {
@@ -347,15 +457,45 @@ document.getElementById('wrap').addEventListener('mousemove', e => {
 document.getElementById('wrap').addEventListener('mouseleave', () => tip.classList.remove('on'));
 
 addEventListener('keydown', e => {
+  if (e.key === 'Escape') return closeMods();
+  if (document.querySelector('.mod.on')) return;
+  if (e.key === 'f') return fs();
+  if (e.key === 'h' || e.key === '?') return openMod('hmodal');
   if (e.key === 'ArrowRight') { e.preventDefault(); setG(G + 1); }
   else if (e.key === 'ArrowLeft') { e.preventDefault(); setG(G - 1); }
   else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
   else if (e.key === 'Home') setG(1);
-  else if (e.key === 'End') setG(MAXG);
+  else if (e.key === 'End') (function start(){
+  const h = readHash();
+  if (h){
+    if (['league','conf','div'].includes(h.group)) group = h.group;
+    if (['wins','name'].includes(h.sort)) sort = h.sort;
+    drawGroups(); drawSorts();
+    setG(h.g);
+  } else {
+    let g = MAXG;
+    try { const saved = +PREF.get('game', MAXG); if (saved >= 1 && saved <= MAXG) g = saved; }
+    catch(e){}
+    setG(g);
+  }
+})();
 });
 addEventListener('resize', () => { sizeCells(); });
 
-setG(MAXG);
+(function start(){
+  const h = readHash();
+  if (h){
+    if (['league','conf','div'].includes(h.group)) group = h.group;
+    if (['wins','name'].includes(h.sort)) sort = h.sort;
+    drawGroups(); drawSorts();
+    setG(h.g);
+  } else {
+    let g = MAXG;
+    try { const saved = +PREF.get('game', MAXG); if (saved >= 1 && saved <= MAXG) g = saved; }
+    catch(e){}
+    setG(g);
+  }
+})();
 </script>
 </body>
 </html>
