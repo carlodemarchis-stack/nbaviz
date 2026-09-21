@@ -17,6 +17,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, "..", "data")
 
 PLAYER_CARDS = 100         # the 100 biggest scorers — about 46% of all points in the league
+BIG_NIGHTS = 100           # the 100 biggest individual scoring games, league-wide
 ROUND_ORDER = ["1st Round", "Semifinals", "Conference Finals", "NBA Finals"]
 
 
@@ -130,6 +131,54 @@ def shots(label):
     return out
 
 
+def big_nights(sched, box, uncounted, deck, n=BIG_NIGHTS):
+    """The n biggest individual scoring games of the season, league-wide.
+
+    Deliberately NOT restricted to the carded players: a 40-point night counts the same
+    whoever had it, and the leaderboard is more interesting for the names that turn up
+    once. The pool is every player-game in the box scores, so it reaches all 578.
+
+    Ties are broken by date, then by name, so the cut is stable across rebuilds -- it
+    lands in the middle of a fat tie (28 games reached 41 points in 2025-26), and an
+    unstable sort would reshuffle the tail every time the payload was rebuilt.
+    """
+    who = {p["id"]: p for p in deck}
+    entry = {}                      # (team, gameId) -> that team's schedule row
+    for ab, gs in sched.items():
+        for g in gs:
+            entry[(ab, g["id"])] = g
+
+    perf = []
+    for gid, blocks in box.items():
+        if gid in uncounted:
+            continue
+        for ab, rows in blocks.items():
+            g = entry.get((ab, gid))
+            if not g:
+                continue
+            for r in rows:
+                pid, mins, pts, fgm, fga, tpm, tpa, ftm, fta, reb, ast = r[:11]
+                p = who.get(pid)
+                if not p:
+                    continue
+                perf.append({
+                    "pts": pts, "id": pid, "name": p["name"], "short": p["short"],
+                    "team": ab, "opp": g["opp"], "h": 1 if g["ha"] == "H" else 0,
+                    "w": 1 if g["res"] == "W" else 0,
+                    "us": g["us"], "them": g["them"], "date": g["date"][:10],
+                    "min": mins, "fgm": fgm, "fga": fga, "tpm": tpm, "tpa": tpa,
+                    "ftm": ftm, "fta": fta, "reb": reb, "ast": ast,
+                })
+    perf.sort(key=lambda x: (-x["pts"], x["date"], x["name"]))
+    top = perf[:n]
+    if top:
+        # How many nights league-wide tied the last man in. The cut lands mid-tie, so
+        # the card says so rather than implying 41 points was a clean line.
+        cut = top[-1]["pts"]
+        top[-1] = dict(top[-1], tie=sum(1 for x in perf if x["pts"] == cut))
+    return top
+
+
 def main(label):
     teams = load("teams.json")
     sched = load(f"schedule-{label}.json")
@@ -142,12 +191,18 @@ def main(label):
     # --- per player per team aggregates, straight from the box scores
     agg = defaultdict(lambda: defaultdict(lambda: [0] * 6))   # pid -> team -> tallies
     plog = defaultdict(list)                                  # pid -> [(date, pts, ...)]
-    date_of, uncounted = {}, set()
+    date_of, uncounted, gidx = {}, set(), {}
     for ab, gs in sched.items():
         for g in gs:
             date_of[g["id"]] = g["date"]
+            # Where this game sits in the team's emitted games list, so a player's log
+            # can point at it instead of carrying its own copy of opponent and score.
             if g.get("counts") is False:
                 uncounted.add(g["id"])
+    for ab, gs in sched.items():
+        for i, g in enumerate(gs):
+            gidx[(ab, g["id"])] = i
+
     # The NBA Cup Championship counts for NOBODY: not the team's record, and not a
     # player's season statistics either. Leaving it in gave 6 Knicks and Spurs one more
     # game in their log than their official games-played, so the per-game average line
@@ -165,7 +220,8 @@ def main(label):
                 a[3] += ast
                 a[4] += mins
                 a[5] += tpm
-                plog[pid].append((date_of.get(gid, ""), pts, reb, ast, tpm, mins))
+                plog[pid].append((date_of.get(gid, ""), pts, reb, ast, tpm, mins,
+                                  ab, gidx.get((ab, gid), -1)))
 
     # --- teams
     out_teams = []
@@ -233,6 +289,12 @@ def main(label):
         rs = p["rs"]
         log = sorted(plog.get(p["id"], []))
         pts_log = [x[1] for x in log]
+        # The hover on the game chart wants opponent, result and final score. Rather
+        # than copy those onto every game (7,000 of them), each entry points at the row
+        # in that team's own games list, which the payload already ships:
+        #   [index into p["teams"], index into that team's games, min, reb, ast]
+        tix = {t["t"]: i for i, t in enumerate(p["teams"])}
+        game_log = [[tix.get(x[6], 0), x[7], x[5], x[2], x[3]] for x in log]
         out_players.append({
             "rank": p["rank"], "id": p["id"], "nbaId": p["nbaId"],
             "name": p["name"], "short": p["short"], "team": p["team"],
@@ -251,7 +313,7 @@ def main(label):
             "ftm": int(rs.get("freeThrowsMade", 0)), "fta": int(rs.get("freeThrowsAttempted", 0)),
             "reb": int(rs.get("rebounds", 0)), "ast": int(rs.get("assists", 0)),
             "dd": int(rs.get("doubleDouble", 0)), "td": int(rs.get("tripleDouble", 0)),
-            "log": pts_log,
+            "log": pts_log, "glog": game_log,
             "highs": {"pts": max(pts_log or [0]),
                       "reb": max((x[2] for x in log), default=0),
                       "ast": max((x[3] for x in log), default=0),
@@ -271,9 +333,12 @@ def main(label):
     # carded 60, because a roster row can be anyone who played.
     names = {p["id"]: [p["name"], p["pos"] or "", p["jersey"] or ""] for p in deck}
 
+    nights = big_nights(sched, box, uncounted, deck)
+
     payload = {
         "season": label, "champion": champ,
         "teams": out_teams, "players": out_players, "names": names,
+        "nights": nights,
         "counts": {"teams": len(out_teams), "players": len(out_players),
                    "playerPool": len(deck)},
     }
@@ -283,6 +348,10 @@ def main(label):
 
     print(f"  {len(out_teams)} team cards, {len(out_players)} player cards "
           f"(pool {len(deck)})")
+    if nights:
+        print(f"  big nights: {len(nights)}, {nights[0]['pts']} down to "
+              f"{nights[-1]['pts']} ({nights[0]['name']} the best), "
+              f"{len({x['id'] for x in nights})} different players")
     print(f"  champion: {champ}")
     top = out_teams[0]
     print(f"  best record: {top['name']} {top['w']}-{top['l']} "
@@ -302,6 +371,23 @@ def main(label):
         print(f"  WARNING {len(mismatch)} game logs != games played: {mismatch[:5]}")
     else:
         print(f"  ok: all {len(out_players)} game logs match games played")
+    # The game chart's hover resolves each log entry through its [team, game] pointer.
+    # If those ever drift the tooltip silently describes the wrong night, so check every
+    # pointer lands on a game played on the same date as the log entry it came from.
+    byab = {t["abbr"]: t for t in out_teams}
+    drift = 0
+    for x in out_players:
+        dates = [d[0][:10] for d in sorted(plog.get(x["id"], []))]
+        for d, (ti, gi, *_ ) in zip(dates, x["glog"]):
+            ab = x["teams"][ti]["t"] if ti < len(x["teams"]) else None
+            g = (byab.get(ab) or {"games": []})["games"]
+            if not (0 <= gi < len(g)) or g[gi]["date"] != d:
+                drift += 1
+    print(f"  game-log pointers: {drift} wrong"
+          if drift else
+          f"  ok: all {sum(len(x['glog']) for x in out_players)} game-log pointers "
+          f"resolve to the right night")
+
     withshots = sum(1 for x in out_players if x.get("shots"))
     print(f"  shot charts: {withshots}/{len(out_players)} player cards")
     # Cross-check the harvested totals against the independently-sourced ESPN line.

@@ -2,8 +2,8 @@
 
 The NBA entry in the AGWAS sport-viz family. One app, two ways to read a season:
 
-- **`index.html` — the Film.** 94 cards: a cover, one per franchise in order of record,
-  the 60 leading scorers, then three charts. Horizontal, deep-linkable, keyboard-driven.
+- **`index.html` — the Film.** 135 cards: a cover, one per franchise in order of record,
+  the 100 leading scorers, then four charts. Horizontal, deep-linkable, keyboard-driven.
 - **`towers.html` — the Towers.** All 30 teams as vertical stacks on a shared baseline:
   **wins build up, losses hang down, games still to play hang from the ceiling.**
   A slider replays the season game by game and the teams re-sort live.
@@ -91,7 +91,8 @@ every scoring player appears in a box score   578
 ```
 
 `build_cards.py` additionally asserts every player's game log is exactly as long as his
-official games-played — the check that caught the Cup final leaking into 6 players' logs.
+official games-played — the check that caught the Cup final leaking into 6 players' logs —
+and that all 6,908 game-log pointers resolve to a game played on the right date.
 
 ## Layout rules that are load-bearing
 
@@ -99,8 +100,16 @@ official games-played — the check that caught the Cup final leaking into 6 pla
   *tallest column that can occur* (`MAXNEED`), not an average, and the label block under
   each tower is a **fixed 50px with fixed line boxes** — the champion's ★ glyph made its
   label 3px taller and lifted that one team's baseline off the line.
-- **`content-visibility:auto` on `.card`** keeps 94 full-screen cards out of the render
+- **`content-visibility:auto` on `.card`** keeps 135 full-screen cards out of the render
   tree. Without it this format crashes mobile Safari.
+- **The hover panel is `position:fixed`, outside the cards.** Anything drawn inside a
+  chart panel is clipped by its own overflow.
+- **A player's game log carries points only.** Opponent, result and final score come from
+  a `[team, game]` pointer into the team's own games list, which the payload already
+  ships — copying them onto all 6,908 player-games cost 100 KB for nothing. `build_cards`
+  checks every pointer lands on a game played on that log entry's date.
+- **The biggest-nights columns drop their names below 1180px.** 100 columns need about
+  1200px before a 9px vertical name fits in one; narrower, it renders as glyph slices.
 - **On mobile the cards are a flex column, not a one-column grid.** The grid box has a
   definite height, so auto rows share it and a `min-height:0` column collapses to 0px
   while its content spills over the next one.
@@ -114,4 +123,4 @@ House style: `--bg:#070910`, Helvetica 300/700, glass panels, radius 20. Accent
 `#f2952e`, NFL `#4d94e0`). Team colours are lifted toward readability when near-black
 (San Antonio, Brooklyn) via `winColor()`.
 
-Not deployed. Intended home: `nba.aguywithascarf.com`.
+Live at **https://nba.aguywithascarf.com** (repo `carlodemarchis-stack/nbaviz`).

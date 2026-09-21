@@ -179,6 +179,45 @@ a{color:inherit}
   background:linear-gradient(90deg,#3a6fb0,#8b96ad,#e0453f)}
 .mix{display:flex;height:9px;border-radius:99px;overflow:hidden;background:var(--pan2);gap:1px}
 .mix i{display:block;height:100%}
+/* --- the biggest nights: 100 columns, points up the y axis, name inside the column --- */
+.nbox{flex:1 1 auto;min-height:0;position:relative;padding-left:34px;
+  display:flex;flex-direction:column}
+.nplot{flex:1 1 auto;min-height:0;position:relative;display:flex;align-items:flex-end;
+  gap:1px;padding-top:4px}
+.ngrid{position:absolute;left:0;right:0;border-top:1px solid rgba(150,166,205,.12);
+  pointer-events:none}
+.ngrid.base{border-top-color:rgba(150,166,205,.3)}
+.nb{flex:1 1 0;min-width:0;height:100%;display:flex;align-items:flex-end;position:relative}
+.nbar{width:100%;border-radius:3px 3px 0 0;position:relative;overflow:hidden;
+  transition:filter .1s}
+.nb:hover .nbar{filter:brightness(1.4)}
+/* The name is anchored to the FOOT of its own column and reads upward, so a long one
+   runs into the empty part of the bar rather than off the top of a short one. */
+.nnm{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;
+  padding-bottom:6px;overflow:hidden;pointer-events:none}
+.nnm i{writing-mode:vertical-rl;transform:rotate(180deg);font-style:normal;font-size:9px;
+  font-weight:700;letter-spacing:.01em;white-space:nowrap;
+  text-shadow:0 1px 2px rgba(0,0,0,.55)}
+/* 100 columns need about 1200px of plot before a 9px name fits in one. Below that the
+   text is a two-pixel slice of a glyph, so drop it and let the hover carry the name. */
+@media (max-width:1180px){ .nnm{display:none} }
+.nfoot{display:flex;gap:12px;font-size:10px;color:var(--dim);margin-top:6px;
+  padding-left:34px;flex-wrap:wrap}
+.nfoot b{color:var(--ink)}
+
+/* One tooltip for the whole film, positioned from the pointer. position:fixed keeps it
+   out of the cards' overflow, which clips anything drawn inside a chart panel. */
+#tip{position:fixed;z-index:60;left:0;top:0;min-width:172px;max-width:260px;
+  padding:10px 12px;border-radius:13px;background:rgba(10,13,21,.97);
+  border:1px solid rgba(150,166,205,.2);box-shadow:0 16px 44px rgba(0,0,0,.55);
+  pointer-events:none;opacity:0;transition:opacity .09s;font-size:11px;line-height:1.45}
+#tip.on{opacity:1}
+#tip .tbig{font-size:25px;font-weight:700;line-height:1;letter-spacing:-.02em}
+#tip .tbig em{font-size:11px;font-weight:400;font-style:normal;color:var(--dim)}
+#tip .tnm{font-size:13px;font-weight:700;margin-top:3px;letter-spacing:-.01em}
+#tip .tdim{color:var(--dim)}
+#tip .trow{margin-top:5px}
+
 .mixlab{display:flex;gap:12px;font-size:10px;color:var(--dim);margin-top:5px;flex-wrap:wrap}
 .mixlab b{color:var(--ink)}
 .dot{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:4px}
@@ -293,6 +332,8 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
 
 <div id="film"></div>
 
+<div id="tip"></div>
+
 <div id="ctlbar">
   <button class="ic" title="Restart (Home)" onclick="go(0)"><svg viewBox="0 0 24 24"><path d="M2 5v6h6"/><path d="M4.6 15.5a8.5 8.5 0 1 0 2-8.8L2 11"/></svg></button>
   <button class="ic" title="Previous (←)" onclick="step(-1)"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
@@ -400,7 +441,7 @@ const sgn = n => (n > 0 ? '+' : '') + n;
 const CARDS = [{kind:'cover'}]
   .concat(D.teams.map(t => ({kind:'team', t})))
   .concat(D.players.map(p => ({kind:'player', p})))
-  .concat([{kind:'race'}, {kind:'ladder'}, {kind:'volume'}]);
+  .concat([{kind:'race'}, {kind:'ladder'}, {kind:'volume'}, {kind:'nights'}]);
 
 const SECTIONS = [
   {name:'Teams',   at:1},
@@ -556,9 +597,10 @@ function logSvg(p){
   for (let v = 20; v <= LOG_SCALE; v += 20) labels += lab(v, v);
   labels += lab(avg, avg, 'zero');
 
-  return `<div class="arcbox">${labels}
+  return `<div class="arcbox loghook">${labels}
   <svg class="log" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-    ${grid}${bars}
+    ${grid}<rect class="loghl" x="0" y="0" width="0" height="${H}"
+      fill="rgba(255,255,255,.13)" pointer-events="none"/>${bars}
     <line x1="0" y1="${y(avg).toFixed(1)}" x2="${W}" y2="${y(avg).toFixed(1)}"
       stroke="rgba(232,236,245,.6)" stroke-width="1.1" stroke-dasharray="5 4"
       vector-effect="non-scaling-stroke"/>
@@ -814,8 +856,24 @@ function playerCard(p){
   </div>`;
 }
 
+/* The 2026-27 film ships with a published schedule and no players at all. Every chart
+   built from D.players has to say so rather than throw: raceCard read top[0].pts on an
+   empty deck, which killed the whole film.innerHTML assignment and left that season's
+   page blank. */
+function noPlayers(kick, title){
+  return `<div class="in">
+    <div class="kick">Chart · ${kick}</div>
+    <h2 style="font-size:clamp(19px,2.2vw,29px);font-weight:700;letter-spacing:-.02em">
+      ${title}</h2>
+    <p style="font-size:12px;color:var(--dim)">Nothing has been played in ${SEASON} yet —
+      this chart fills in once the season tips off.</p>
+  </div>`;
+}
+
 function raceCard(){
-  const top = D.players.slice(0, 30), max = top[0].pts;
+  const top = D.players.slice(0, 30);
+  if (!top.length) return noPlayers('the scoring race', `Who scored the most, ${SEASON}`);
+  const max = top[0].pts;
   return `<div class="in">
     <div class="kick">Chart · the scoring race</div>
     <h2 style="font-size:clamp(19px,2.2vw,29px);font-weight:700;letter-spacing:-.02em">
@@ -862,8 +920,86 @@ function ladderCard(){
   </div>`;
 }
 
+/* ---------- the biggest nights ---------- */
+const WHEN = d => {
+  const [y, m, dd] = d.split('-');
+  return `${+dd} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]} ${y}`;
+};
+
+/* Black or white ink, whichever the bar colour can carry. winColor() hands back either
+   a #rrggbb or an rgb() string, so parse both. */
+function ink(c){
+  let r, g, b;
+  let m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(c);
+  if (m) [r, g, b] = m.slice(1).map(h => parseInt(h, 16));
+  else { m = /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(c); if (!m) return '#fff';
+         [r, g, b] = m.slice(1).map(Number); }
+  return (0.2126*r + 0.7152*g + 0.0722*b) / 255 > 0.62 ? 'rgba(7,9,16,.9)' : '#fff';
+}
+
+/* One night, as the tooltip renders it — shared by this card and the game chart. */
+function nightTip(o){
+  return `<div class="tbig">${o.pts}<em> pts</em></div>
+    <div class="tnm">${esc(o.name)}</div>
+    <div class="trow tdim">${o.team} ${o.h ? 'vs' : '@'} ${o.opp} ·
+      <b style="color:${o.w ? 'var(--win)' : 'var(--loss)'}">${o.w ? 'W' : 'L'}
+      ${o.us}–${o.them}</b></div>
+    <div class="tdim">${WHEN(o.date)}</div>` + (o.fga == null ? '' :
+    `<div class="trow">${o.fgm}-${o.fga} FG · ${o.tpm}-${o.tpa} 3PT ·
+      ${o.ftm}-${o.fta} FT</div>`) +
+    `<div class="tdim">${o.reb} reb · ${o.ast} ast · ${o.min} min</div>`;
+}
+
+function nightsCard(){
+  const N = D.nights || [];
+  if (!N.length) return noPlayers('the biggest nights', 'The 100 biggest scoring games');
+
+  const max = Math.ceil(N[0].pts / 10) * 10 + 5;     // headroom above the best night
+  const cut = N[N.length - 1].pts;
+  const inList = N.filter(n => n.pts === cut).length;
+  const tied = N[N.length - 1].tie || inList;   // nights on the cut league-wide
+  const y = v => 100 - v / max * 100;                // % from the top of the plot
+
+  let grid = `<div class="ngrid base" style="bottom:0"></div>`;
+  // The zero label sits ON the baseline, so it is anchored above the line rather than
+  // centred on it -- centred, half of it hangs below the bottom of the card and clips.
+  let labels = `<span class="arclbl" style="top:100%;transform:translateY(-100%)">0</span>`;
+  for (let v = 20; v < max; v += 20){
+    grid += `<div class="ngrid" style="top:${y(v).toFixed(2)}%"></div>`;
+    labels += `<span class="arclbl" style="top:${y(v).toFixed(2)}%">${v}</span>`;
+  }
+
+  const bars = N.map((n, i) => {
+    const col = winColor(TEAMS[n.team] || {});
+    return `<div class="nb" data-night="${i}">
+      <div class="nbar" style="height:${(n.pts / max * 100).toFixed(2)}%;background:${col}">
+        <span class="nnm"><i style="color:${ink(col)}">${esc(n.name)}</i></span>
+      </div></div>`;
+  }).join('');
+
+  return `<div class="in">
+    <div class="kick">Chart · the biggest nights</div>
+    <h2 style="font-size:clamp(19px,2.2vw,29px);font-weight:700;letter-spacing:-.02em">
+      The 100 biggest scoring games</h2>
+    <p style="font-size:12px;color:var(--dim);max-width:92ch">Every individual scoring
+      game of ${SEASON}, league-wide, ranked — so one player can appear many times.
+      Each column is one night, its height the points, its colour the team he played for.
+      Hover or tap a column for the game. It took <b style="color:var(--ink)">${cut}</b> points
+      to get here${tied > inList ? ` — ${tied} nights finished on exactly that, so the last
+      ${inList} places went to the earliest of them` : ''}.</p>
+    <div class="nbox" data-nights="1">${labels}
+      <div class="nplot">${grid}${bars}</div></div>
+    <div class="nfoot">
+      <span>highest <b>${N[0].pts}</b> — ${esc(N[0].name)}</span>
+      <span>lowest on the list <b>${cut}</b></span>
+      <span><b>${new Set(N.map(n => n.id)).size}</b> different players</span>
+      <span style="margin-left:auto">best → 100th, left to right</span></div>
+  </div>`;
+}
+
 function volumeCard(){
   const top = D.players.slice(0, 26);
+  if (!top.length) return noPlayers('shot diet', 'How the top scorers got there');
   const max = Math.max(...top.map(p => p.fga + p.tpa * 0 + p.fta));
   return `<div class="in">
     <div class="kick">Chart · shot diet</div>
@@ -902,6 +1038,7 @@ film.innerHTML = CARDS.map(c => {
              : c.kind === 'player' ? playerCard(c.p)
              : c.kind === 'race'   ? raceCard()
              : c.kind === 'ladder' ? ladderCard()
+             : c.kind === 'nights' ? nightsCard()
              : volumeCard();
   return `<section class="card">${body}</section>`;
 }).join('');
@@ -937,12 +1074,79 @@ document.getElementById('applist').innerHTML = APPS.map(a =>
 const cards = [...film.children];
 let cur = 0, playing = null;
 
+/* ---------- hover detail ---------- */
+/* Two charts want the same panel: the biggest-nights card (one element per column) and
+   every player's game chart (a single stretched svg, so the column is worked out from
+   the pointer's x rather than from per-bar hit areas -- 82 rects 3px wide are a miserable
+   hover target, and the svg is preserveAspectRatio="none" so x maps linearly). */
+const TIP = document.getElementById('tip');
+function showTip(html, x, y){
+  TIP.innerHTML = html;
+  TIP.classList.add('on');
+  const r = TIP.getBoundingClientRect();
+  let l = x + 16, t = y - r.height - 16;
+  if (l + r.width > innerWidth - 10) l = x - r.width - 16;
+  if (l < 10) l = 10;
+  if (t < 10) t = y + 20;
+  TIP.style.transform = `translate(${Math.round(l)}px,${Math.round(t)}px)`;
+}
+function hideTip(){ TIP.classList.remove('on'); }
+
+let hlEl = null;
+function clearHl(){ if (hlEl){ hlEl.setAttribute('width', 0); hlEl = null; } }
+
+function onHover(e){
+  const box = e.target.closest('.loghook');
+  if (box) return logHover(e, box);
+  clearHl();
+  const col = e.target.closest('.nb');
+  if (col) return showTip(nightTip(D.nights[+col.dataset.night]), e.clientX, e.clientY);
+  hideTip();
+}
+
+function logHover(e, box){
+  const svg = box.querySelector('svg.log');
+  const card = box.closest('.card');
+  const p = (CARDS[cards.indexOf(card)] || {}).p;
+  if (!p || !p.log.length) return hideTip();
+  const r = svg.getBoundingClientRect();
+  const i = Math.floor((e.clientX - r.left) / r.width * p.log.length);
+  if (i < 0 || i >= p.log.length) { clearHl(); return hideTip(); }
+
+  const bw = 1000 / p.log.length;
+  hlEl = svg.querySelector('.loghl');
+  hlEl.setAttribute('x', (i * bw).toFixed(2));
+  hlEl.setAttribute('width', Math.max(1.2, bw - 0.8).toFixed(2));
+
+  // The log carries points only; the rest of the night is a pointer into the team's
+  // own games list, which the payload already ships for the team cards.
+  const [ti, gi, min, reb, ast] = (p.glog || [])[i] || [];
+  const ab = ((p.teams || [])[ti] || {}).t || p.team;
+  const g = ((TEAMS[ab] || {}).games || [])[gi];
+  if (!g) return hideTip();
+  showTip(`<div class="tdim" style="font-size:10px;letter-spacing:.14em;
+      text-transform:uppercase">Game ${i + 1} of ${p.log.length}</div>` +
+    nightTip({pts: p.log[i], name: p.name, team: ab, opp: g.opp,
+              h: g.ha === 'H', w: g.res === 'W', us: g.us, them: g.them,
+              date: g.date, min, reb, ast}), e.clientX, e.clientY);
+}
+
+film.addEventListener('mousemove', onHover);
+film.addEventListener('mouseleave', () => { clearHl(); hideTip(); });
+/* Touch has no hover: a tap on a column shows its panel, the next tap elsewhere hides it. */
+film.addEventListener('click', e => {
+  if (e.target.closest('.nb') || e.target.closest('.loghook')) onHover(e);
+  else { clearHl(); hideTip(); }
+});
+
+
 function label(i){
   const c = CARDS[i];
   if (c.kind === 'cover') return 'Cover';
   if (c.kind === 'team') return c.t.name;
   if (c.kind === 'player') return `${c.p.name} · no. ${c.p.rank}`;
-  return {race:'The scoring race', ladder:'The ladder', volume:'Shot diet'}[c.kind];
+  return {race:'The scoring race', ladder:'The ladder', volume:'Shot diet',
+          nights:'The biggest nights'}[c.kind];
 }
 function section(i){
   let s = 0;
@@ -1011,7 +1215,9 @@ const INDEX = CARDS.map((c,i) => {
   else if (c.kind === 'cover') { s = 'cover start title'; sub = 'the opening card'; }
   else { s = {race:'scoring race points leaders chart',
               ladder:'ladder standings seeds table chart',
-              volume:'shot diet attempts volume chart'}[c.kind]; sub = 'chart'; }
+              volume:'shot diet attempts volume chart',
+              nights:'biggest nights best games high scoring 100 chart'}[c.kind];
+         sub = 'chart'; }
   const group = c.kind === 'team' ? 'Teams'
               : c.kind === 'player' ? 'Players'
               : c.kind === 'cover' ? 'Start' : 'Charts';
