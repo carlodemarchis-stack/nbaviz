@@ -97,7 +97,13 @@ a{color:inherit}
 
 .tright{display:flex;flex-direction:column;gap:12px;min-height:0}
 .arcwrap{flex:0 0 auto}
-.arc{width:100%;height:clamp(108px,15vh,150px);display:block;overflow:visible}
+.arcbox{position:relative;width:100%}
+.arc{width:100%;height:clamp(118px,16vh,164px);display:block;overflow:visible}
+.arclbl{position:absolute;left:0;transform:translateY(-50%);font-size:9.5px;
+  color:rgba(150,166,205,.5);font-variant-numeric:tabular-nums;pointer-events:none;
+  background:linear-gradient(90deg,rgba(9,11,18,.85),rgba(9,11,18,0));padding:0 7px 0 2px;
+  line-height:1}
+.arclbl.zero{color:rgba(232,236,245,.75);font-size:10px}
 .arclab{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);
   margin-top:4px;font-variant-numeric:tabular-nums}
 
@@ -337,6 +343,23 @@ const NAMES = D.names || {};
 const TEAMS = {}; D.teams.forEach(t => TEAMS[t.abbr] = t);
 
 const crest = ab => `img/crest/${ab}.svg`;
+/* Brooklyn and San Antonio are #000000, invisible as a line colour; prefer a clearly
+   brighter secondary. Mirrors winColor() on the towers page. */
+function lum(hex){
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return (0.2126*(n>>16) + 0.7152*((n>>8)&255) + 0.0722*(n&255)) / 255;
+}
+function winColor(t){
+  const p = lum(t.primary), sec = lum(t.secondary);
+  if (p === null) return 'var(--acc)';
+  if (p >= 0.22) return t.primary;
+  if (sec !== null && sec > p + 0.12) return t.secondary;
+  const m = /^#?([0-9a-f]{6})$/i.exec(t.primary), n = parseInt(m[1], 16);
+  const k = 0.30 / Math.max(p, 0.02);
+  const c = [n>>16, (n>>8)&255, n&255].map(v => Math.min(255, Math.round(v*k + 62)));
+  return `rgb(${c.join(',')})`;
+}
 const head  = id => `img/headw/${id}.webp`;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g,
   c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -356,8 +379,29 @@ const SECTIONS = [
 
 /* ---------- drawing helpers ---------- */
 
-/* The season arc: games above .500 after every game. A climbing line is a good
-   season, a sinking one is not, and you never have to read a number. */
+/* The season arc: games above .500 after every game.
+
+   Three things make it legible, and all three were missing at first:
+   1. ONE SCALE FOR ALL 30 TEAMS. Auto-fitting each card to its own range made a team
+      peaking at +11 look exactly as dramatic as Oklahoma City's +48 runaway. In a film
+      you read end to end, the shape has to be comparable between cards.
+   2. ABOVE AND BELOW .500 ARE DIFFERENT COLOURS. 27 of the 30 teams dipped under at
+      some point; filling that the same as the good half hid the one thing the chart is
+      named after. Green above, red below -- the language the towers and game bars use.
+   3. GRID LINES AND A LABELLED .500, or +11 and +40 are just squiggles. */
+const ARC_SCALE = (() => {
+  let m = 10;
+  D.teams.forEach(t => {
+    let b = 0;
+    t.games.forEach(g => {
+      if (g.counts === false || !g.res) return;
+      b += g.res === 'W' ? 1 : -1;
+      m = Math.max(m, Math.abs(b));
+    });
+  });
+  return Math.ceil(m / 10) * 10;
+})();
+
 function arcSvg(t){
   const games = t.games.filter(g => g.counts !== false);
   const pts = []; let bal = 0, hi = 0, lo = 0;
@@ -367,18 +411,27 @@ function arcSvg(t){
     pts.push(bal); hi = Math.max(hi, bal); lo = Math.min(lo, bal);
   });
   if (!pts.length) return `<div class="box" style="color:var(--dim);font-size:12px">
-    Not played yet — ${games.length} games scheduled.</div>`;
+    Not played yet \u2014 ${games.length} games scheduled.</div>`;
 
-  const W = 1000, H = 260, pad = 6;
-  const span = Math.max(4, hi - lo);
-  const y = v => pad + (hi - v) / span * (H - pad * 2);
+  const W = 1000, H = 260, mid = H / 2;
+  const y = v => mid - (v / ARC_SCALE) * (mid - 6);
   const x = i => i / Math.max(1, pts.length - 1) * W;
-  const zero = y(0);
   let d = `M0 ${y(pts[0]).toFixed(1)}`;
   pts.forEach((v, i) => { d += ` L${x(i).toFixed(1)} ${y(v).toFixed(1)}`; });
-  const area = `${d} L${W} ${zero.toFixed(1)} L0 ${zero.toFixed(1)} Z`;
+  const area = `${d} L${W} ${mid} L0 ${mid} Z`;
 
-  // per-game ticks under the arc
+  let grid = '';
+  for (let v = 10; v <= ARC_SCALE; v += 10){
+    for (const sv of [v, -v]){
+      const gy = y(sv);
+      if (gy < 4 || gy > H - 4) continue;
+      // No <text> in here: the svg is preserveAspectRatio="none", so glyphs get
+      // stretched horizontally and shrink to nothing. Labels are HTML, below.
+      grid += `<line x1="0" y1="${gy.toFixed(1)}" x2="${W}" y2="${gy.toFixed(1)}"
+        stroke="rgba(150,166,205,.10)" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+    }
+  }
+
   const tw = W / games.length;
   const ticks = games.map((g, i) => {
     if (!g.res) return `<rect x="${(i*tw).toFixed(2)}" y="${H+14}" width="${Math.max(1,tw-.7).toFixed(2)}"
@@ -388,22 +441,37 @@ function arcSvg(t){
       height="9" rx="1.5" fill="${win ? 'var(--win)' : 'var(--loss)'}" opacity=".85"/>`;
   }).join('');
 
-  return `<svg class="arc" viewBox="0 0 ${W} ${H+30}" preserveAspectRatio="none">
-    <defs><linearGradient id="ag${t.abbr}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="${t.primary}" stop-opacity=".55"/>
-      <stop offset="1" stop-color="${t.primary}" stop-opacity=".04"/>
-    </linearGradient></defs>
-    <line x1="0" y1="${zero.toFixed(1)}" x2="${W}" y2="${zero.toFixed(1)}"
-      stroke="rgba(150,166,205,.34)" stroke-width="1.2" stroke-dasharray="4 4"
-      vector-effect="non-scaling-stroke"/>
-    <path d="${area}" fill="url(#ag${t.abbr})"/>
-    <path d="${d}" fill="none" stroke="${t.primary}" stroke-width="2.4"
+  const TOT = H + 30;
+  const lbl = (v, txt, cls) =>
+    `<span class="arclbl ${cls || ''}" style="top:${(y(v) / TOT * 100).toFixed(2)}%">${txt}</span>`;
+  let labels = lbl(0, '.500', 'zero');
+  for (let v = 20; v <= ARC_SCALE; v += 20){
+    if (y(v) > 10) labels += lbl(v, '+' + v);
+    if (y(-v) < H - 10) labels += lbl(-v, '\u2212' + v);
+  }
+
+  return `<div class="arcbox">${labels}<svg class="arc" viewBox="0 0 ${W} ${TOT}" preserveAspectRatio="none">
+    <defs>
+      <clipPath id="up${t.abbr}"><rect x="0" y="0" width="${W}" height="${mid}"/></clipPath>
+      <clipPath id="dn${t.abbr}"><rect x="0" y="${mid}" width="${W}" height="${H}"/></clipPath>
+    </defs>
+    ${grid}
+    <path d="${area}" fill="var(--win)" fill-opacity=".26" clip-path="url(#up${t.abbr})"/>
+    <path d="${area}" fill="var(--loss)" fill-opacity=".26" clip-path="url(#dn${t.abbr})"/>
+    <line x1="0" y1="${mid}" x2="${W}" y2="${mid}"
+      stroke="rgba(232,236,245,.55)" stroke-width="1.4" vector-effect="non-scaling-stroke"/>
+    <path d="${d}" fill="none" stroke="${winColor(t)}" stroke-width="2.4"
       vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+    ${hi > 0 ? `<circle cx="${x(pts.indexOf(hi)).toFixed(1)}" cy="${y(hi).toFixed(1)}" r="3.6" fill="var(--win)"/>` : ''}
+    ${lo < 0 ? `<circle cx="${x(pts.indexOf(lo)).toFixed(1)}" cy="${y(lo).toFixed(1)}" r="3.6" fill="var(--loss)"/>` : ''}
     ${ticks}
-  </svg>
-  <div class="arclab"><span>game 1</span>
-    <span>peak ${sgn(hi)} · low ${sgn(lo)} · finished ${sgn(pts[pts.length-1])}</span>
-    <span>game ${pts.length}</span></div>`;
+  </svg></div>
+  <div class="mixlab" style="margin-top:4px">
+    <span><i class="dot" style="background:var(--win)"></i>peak <b>${sgn(hi)}</b></span>
+    <span><i class="dot" style="background:var(--loss)"></i>low <b>${sgn(lo)}</b></span>
+    <span>finished <b>${sgn(pts[pts.length-1])}</b></span>
+    <span style="margin-left:auto;color:var(--dim)">82 games \u00b7 same \u00b150 scale on every card</span>
+  </div>`;
 }
 
 /* Points scored in every game, in order, with the average as a line. */
