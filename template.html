@@ -152,8 +152,14 @@ a{color:inherit}
   color:rgba(150,166,205,.55)}
 
 /* Points / Rebounds / Assists over the same game chart. */
-.loghd{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+/* Title + Split/Avg + Points/Rebounds/Assists fit on one line in the card's right column
+   but not on a phone. Wrap them, same as .courthd -- a shrunk flex item breaks its own
+   text mid-phrase instead. */
+.loghd{display:flex;align-items:center;gap:10px;row-gap:4px;margin-bottom:6px;flex-wrap:wrap}
+.loghd > *{flex:0 0 auto}
+.loghd .kick{white-space:nowrap}
 .ltabs{margin-left:auto;display:flex;gap:3px;flex:0 0 auto}
+.ltabs.mtabs{margin-left:0}
 .ltab{font:inherit;font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
   color:var(--dim);background:none;border:1px solid transparent;border-radius:99px;
   padding:3px 9px;cursor:pointer;line-height:1}
@@ -439,7 +445,14 @@ const TEAMS = {}; D.teams.forEach(t => TEAMS[t.abbr] = t);
 /* Which series the game chart is showing. Global, so it carries from card to card, and
    remembered, per the rule that these pages reopen where you left them. */
 let METRIC = 'pts';
-try { const m = localStorage.getItem('nba.metric'); if (m) METRIC = m; } catch(e) {}
+/* How the points columns are coloured: 'split' stacks them by 2PT / 3PT / FT, 'avg'
+   colours the whole bar green at or above the average, red below, gold for the best
+   night. Rebounds and assists have no split, so they are always drawn the 'avg' way. */
+let LOGMODE = 'split';
+try {
+  const m = localStorage.getItem('nba.metric'); if (m) METRIC = m;
+  const d = localStorage.getItem('nba.logmode'); if (d) LOGMODE = d;
+} catch(e) {}
 
 const crest = ab => `img/crest/${ab}.svg`;
 /* Brooklyn and San Antonio are #000000, invisible as a line colour; prefer a clearly
@@ -626,13 +639,14 @@ function logSvg(p, m){
   // to give up: green at or above the average, red below, gold for the season high.
   const MIX = [['from twos', 'var(--acc)'], ['from threes', '#5b8dd9'],
                ['free throws', '#9aa6bd']];
+  const stacked = (m === 'pts' && LOGMODE === 'split');
   let above = 0, over = 0;
   const bars = L.map((_, i) => {
     const v = M.val(p, i);
     if (v >= avg) above++;
     if (v > CAP) over++;
     let seg = '';
-    if (m === 'reb' || m === 'ast'){
+    if (!stacked){
       const yy = y(v);
       seg = `<rect x="${x(i)}" y="${yy.toFixed(1)}" width="${w}"
         height="${Math.max(0.6, H - yy).toFixed(1)}" rx="1.5"
@@ -674,15 +688,15 @@ function logSvg(p, m){
   for (let v = M.step; v <= CAP; v += M.step) labels += lab(v, v);
   labels += lab(avg, avg, 'zero');
 
-  const key = (m === 'reb' || m === 'ast')
-    ? `<span><i class="dot" style="background:var(--win)"></i>at or above ${avg}
+  const key = stacked
+    ? MIX.map(k => `<span><i class="dot" style="background:${k[1]}"></i>${k[0]}</span>`).join('')
+    : `<span><i class="dot" style="background:var(--win)"></i>at or above ${avg}
          <b>${above}</b></span>
        <span><i class="dot" style="background:var(--loss)"></i>below
-         <b>${L.length - above}</b></span>`
-    : MIX.map(k => `<span><i class="dot" style="background:${k[1]}"></i>${k[0]}</span>`).join('');
-  const tail = (m === 'reb' || m === 'ast')
-    ? `game 1 → ${L.length} · same 0–${CAP} scale on every card`
-    : `<b>${above}</b> of ${L.length} at or above ${avg} · same 0–${CAP} scale on every card`;
+         <b>${L.length - above}</b></span>`;
+  const tail = stacked
+    ? `<b>${above}</b> of ${L.length} at or above ${avg} · same 0–${CAP} scale on every card`
+    : `game 1 → ${L.length} · same 0–${CAP} scale on every card`;
 
   return `<div class="arcbox loghook">${labels}
   <svg class="log" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
@@ -701,8 +715,14 @@ function logSvg(p, m){
 
 /* The header carries the tabs, so switching metric replaces this whole block. */
 function logPanel(p, m){
+  // Only points can be split by shot type, so the Split/Avg choice is shown only there.
+  const modes = m === 'pts'
+    ? `<span class="ltabs mtabs">${[['split','Split'],['avg','Avg']].map(k =>
+        `<button class="ltab ${k[0] === LOGMODE ? 'on' : ''}" onclick="setLogMode('${k[0]}')"
+          >${k[1]}</button>`).join('')}</span>`
+    : '';
   return `<div class="loghd">
-    <span class="kick">Every game, ${(METRICS[m] || METRICS.pts).name}</span>
+    <span class="kick">Every game, ${(METRICS[m] || METRICS.pts).name}</span>${modes}
     <span class="ltabs">${Object.keys(METRICS).map(k =>
       `<button class="ltab ${k === m ? 'on' : ''}" onclick="setMetric('${k}')"
         >${METRICS[k].tab}</button>`).join('')}</span>
@@ -937,7 +957,7 @@ function playerCard(p){
           <div class="kick" style="margin-bottom:6px">Where the points came from</div>
           ${mixBar(p)}
         </div>
-        <div class="panel logwrap" style="padding:13px 15px" data-metric="${METRIC}">
+        <div class="panel logwrap" style="padding:13px 15px" data-metric="${METRIC}:${LOGMODE}">
           ${logPanel(p, METRIC)}
         </div>
         ${p.po ? `<div class="box"><div class="kv">
@@ -1198,15 +1218,21 @@ function setMetric(m){
   try { localStorage.setItem('nba.metric', m); } catch(e) {}
   paintLog(cur);
 }
+function setLogMode(d){
+  LOGMODE = d;
+  try { localStorage.setItem('nba.logmode', d); } catch(e) {}
+  paintLog(cur);
+}
 /* Re-rendering all 100 charts on every switch is wasteful, so a card is brought up to
    date when you land on it. paint() calls this. */
 function paintLog(i){
   const c = CARDS[i];
   if (!c || c.kind !== 'player') return;
   const el = cards[i] && cards[i].querySelector('.logwrap');
-  if (!el || el.dataset.metric === METRIC) return;
+  const want = METRIC + ':' + LOGMODE;
+  if (!el || el.dataset.metric === want) return;
   el.innerHTML = logPanel(c.p, METRIC);
-  el.dataset.metric = METRIC;
+  el.dataset.metric = want;
   clearHl();
   hideTip();
 }

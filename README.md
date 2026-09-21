@@ -112,6 +112,10 @@ and that all 6,908 game-log pointers resolve to a game played on the right date.
   2PT / 3PT / FT; everything left over came from twos.
 - **The portrait watermark is the jersey number, not the rank.** The rank is the film's
   ordering, so it sits opposite as a small chip rather than as the giant number.
+- **The points chart has a Split / Avg switch** beside its title: Split stacks each column
+  by 2PT / 3PT / FT, Avg colours the whole bar green at or above the average, red below,
+  gold for the best night. Rebounds and assists have no split, so they are always drawn
+  the Avg way and the switch is hidden there.
 - **The game chart has Points / Rebounds / Assists tabs**, each on its own deck-wide scale
   (99th percentile of season highs; 10s for points, 5s for rebounds and assists). Only the
   card you are looking at is re-rendered on a switch — redrawing all 100 charts is waste —
