@@ -131,6 +131,9 @@ and that all 6,908 game-log pointers resolve to a game played on the right date.
   by 2PT / 3PT / FT, Avg colours the whole bar green at or above the average, red below,
   gold for the best night. Rebounds and assists have no split, so they are always drawn
   the Avg way and the switch is hidden there.
+- **Each bar is topped with a W or an L.** HTML overlay, not `<text>` — same reason as the
+  axis labels. Neutral colours on purpose: green and red already mean above/below average
+  on that very chart. Hidden below 1160px, where 82 columns stop leaving ~9px each.
 - **The game chart draws every game his team played while he was on it**, not just his
   appearances — a missed game is a gap with a faint baseline tick. The calendar is derived
   client-side (`calendar()`) from the `[team, game]` pointers plus the team fixture lists

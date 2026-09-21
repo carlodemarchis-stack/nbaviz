@@ -117,6 +117,18 @@ a{color:inherit}
   font-size:10px;color:rgba(255,255,255,.72);font-variant-numeric:tabular-nums;
   pointer-events:none;line-height:1;white-space:nowrap}
 .arclbl.zero{color:#fff;font-weight:700}
+/* W / L sits on top of each bar. HTML, not <text>, for the same reason the axis labels
+   are: this svg is preserveAspectRatio="none", which stretches glyphs sideways. The
+   wrapper covers exactly the plot -- left:34px is the y-axis gutter, and an absolutely
+   positioned child is placed against the padding box. Neutral colours on purpose: green
+   and red already mean above/below average on this very chart. */
+.wlwrap{position:absolute;left:34px;right:0;top:0;bottom:0;pointer-events:none}
+.wl{position:absolute;transform:translateX(-50%);margin-bottom:2px;font-style:normal;
+  font-size:7.5px;font-weight:700;line-height:1}
+.wl.w{color:rgba(232,236,245,.8)}
+.wl.l{color:rgba(150,166,205,.42)}
+/* 82 letters need about 9px of column each before they stop being legible. */
+@media (max-width:1160px){ .wl{display:none} }
 .arclab{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);
   margin-top:4px;font-variant-numeric:tabular-nums}
 
@@ -802,7 +814,23 @@ function logSvg(p, m){
     ? `<b>${above}</b> of ${L.length} at or above ${avg}${gaps} · same 0–${CAP} scale on every card`
     : `${L.length} of ${CAL.length} games played${gaps ? '' : ''} · same 0–${CAP} scale on every card`;
 
-  return `<div class="arcbox loghook">${labels}
+  // One W or L per bar, so a big night against a loss reads differently from a big night
+  // in a win. Only on games he played -- a bar he has no bar for gets no letter.
+  let wl = '';
+  CAL.forEach((slot, c) => {
+    if (slot.li < 0) return;
+    const ab = ((p.teams || [])[slot.ti] || {}).t;
+    const g = ((TEAMS[ab] || {}).games || [])[slot.gi];
+    if (!g || !g.res) return;
+    // Capped at 94% so a bar that reaches the ceiling keeps its letter inside the plot,
+    // sitting just within the top of the bar rather than floating off the chart.
+    const top = Math.max(0, y(M.val(p, slot.li)) / H * 100);
+    wl += `<i class="wl ${g.res === 'W' ? 'w' : 'l'}"
+      style="left:${((c + 0.5) / CAL.length * 100).toFixed(3)}%;
+             bottom:${Math.min(100 - top, 94).toFixed(2)}%">${g.res}</i>`;
+  });
+
+  return `<div class="arcbox loghook">${labels}<span class="wlwrap">${wl}</span>
   <svg class="log" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
     ${grid}<rect class="loghl" x="0" y="0" width="0" height="${H}"
       fill="rgba(255,255,255,.13)" pointer-events="none"/>${bars}
