@@ -139,9 +139,26 @@ a{color:inherit}
              var(--pan2);border:1px solid var(--line);display:flex;align-items:flex-end}
 .shot img{width:100%;height:100%;object-fit:contain;object-position:bottom center;
   display:block;filter:drop-shadow(0 12px 28px rgba(0,0,0,.55))}
+/* The watermark is the JERSEY number -- it is what he is called on the floor. The rank
+   is the film's ordering, not his identity, so it sits opposite as a small chip. */
 .rankno{position:absolute;top:8px;left:14px;font-size:clamp(52px,7.4vw,104px);
   font-weight:700;line-height:.82;color:rgba(232,236,245,.10);
   font-variant-numeric:tabular-nums;letter-spacing:-.03em;pointer-events:none}
+.rankchip{position:absolute;top:11px;right:13px;text-align:right;pointer-events:none;
+  line-height:1.1}
+.rankchip b{display:block;font-size:19px;font-weight:700;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;color:rgba(232,236,245,.62)}
+.rankchip span{font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(150,166,205,.55)}
+
+/* Points / Rebounds / Assists over the same game chart. */
+.loghd{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.ltabs{margin-left:auto;display:flex;gap:3px;flex:0 0 auto}
+.ltab{font:inherit;font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--dim);background:none;border:1px solid transparent;border-radius:99px;
+  padding:3px 9px;cursor:pointer;line-height:1}
+.ltab:hover{color:var(--ink)}
+.ltab.on{color:var(--ink);border-color:rgba(150,166,205,.3);background:var(--pan)}
 .pmeta{display:flex;align-items:center;gap:11px}
 .pmeta img{width:34px;height:34px;flex:0 0 auto}
 .pname{font-size:clamp(21px,2.4vw,33px);font-weight:700;line-height:1.03;letter-spacing:-.015em}
@@ -169,13 +186,19 @@ a{color:inherit}
 .court{width:100%;flex:1 1 auto;min-height:0;display:block}
 .courthd{display:flex;align-items:baseline;gap:10px;font-size:10px;color:var(--dim);
   margin-bottom:2px}
-.courthd span:last-child{margin-left:auto;white-space:nowrap}
+/* Three items that fit on one line in the card's left column but not on a phone. Let
+   them wrap to a clean second line rather than be squeezed: a shrunk flex item breaks
+   its own text mid-phrase ("1030" over "shots"). */
+.courthd{flex-wrap:wrap;row-gap:2px}
+.courthd > *{flex:0 0 auto}
+.courthd .cstat{margin-left:auto;white-space:nowrap}
+.courthd .kick{white-space:nowrap}
+.courthd .cramp{display:flex;align-items:center;gap:5px;font-size:9px;
+  color:rgba(150,166,205,.7);white-space:nowrap}
 .courthd b{color:var(--ink)}
 .court .line{fill:none;stroke:rgba(150,166,205,.4);stroke-width:2.2;
   vector-effect:non-scaling-stroke}
-.hotlab{display:flex;align-items:center;gap:8px;font-size:9.5px;color:var(--dim);
-  margin-top:2px}
-.hotbar{width:76px;height:7px;border-radius:99px;
+.hotbar{display:inline-block;width:48px;height:6px;border-radius:99px;vertical-align:middle;
   background:linear-gradient(90deg,#3a6fb0,#8b96ad,#e0453f)}
 .mix{display:flex;height:9px;border-radius:99px;overflow:hidden;background:var(--pan2);gap:1px}
 .mix i{display:block;height:100%}
@@ -413,6 +436,10 @@ const D = {"season":"2025-26","champion":"NY","teams":[{"abbr":"OKC","name":"Okl
 const SEASON = D.season;
 const NAMES = D.names || {};
 const TEAMS = {}; D.teams.forEach(t => TEAMS[t.abbr] = t);
+/* Which series the game chart is showing. Global, so it carries from card to card, and
+   remembered, per the rule that these pages reopen where you left them. */
+let METRIC = 'pts';
+try { const m = localStorage.getItem('nba.metric'); if (m) METRIC = m; } catch(e) {}
 
 const crest = ab => `img/crest/${ab}.svg`;
 /* Brooklyn and San Antonio are #000000, invisible as a line colour; prefer a clearly
@@ -561,49 +588,81 @@ const LOG_SCALE = (() => {
   return Math.max(30, Math.ceil(p99 / 10) * 10);
 })();
 
-function logSvg(p){
+/* Each metric gets ONE scale for the whole deck, same reasoning as the points cap: the
+   99th percentile of the deck's season highs, so a single freak night does not flatten
+   every other card. Points step in 10s, rebounds and assists in 5s -- a 10 step on a
+   20-rebound axis is two gridlines. */
+function deckScale(pick, step, floor){
+  const highs = D.players.map(pick).filter(v => v != null).sort((a, b) => a - b);
+  if (!highs.length) return floor;
+  const p99 = highs[Math.floor(highs.length * 0.99) - 1] || highs[highs.length - 1];
+  return Math.max(floor, Math.ceil(p99 / step) * step);
+}
+const METRICS = {
+  pts: {name: 'points scored', tab: 'Points', avg: p => p.ppg, high: p => p.highs.pts,
+        val: (p, i) => p.log[i], scale: () => LOG_SCALE, step: 20},
+  reb: {name: 'rebounds', tab: 'Rebounds', avg: p => p.rpg, high: p => p.highs.reb,
+        val: (p, i) => ((p.glog || [])[i] || [])[3] || 0,
+        scale: () => deckScale(p => p.highs.reb, 5, 10), step: 5},
+  ast: {name: 'assists', tab: 'Assists', avg: p => p.apg, high: p => p.highs.ast,
+        val: (p, i) => ((p.glog || [])[i] || [])[4] || 0,
+        scale: () => deckScale(p => p.highs.ast, 5, 10), step: 5},
+};
+const SCALE = {};   // filled on first use; D.players is fixed for the page
+
+function logSvg(p, m){
+  const M = METRICS[m] || METRICS.pts;
   const L = p.log || [];
   if (!L.length) return '';
+  const CAP = SCALE[m] || (SCALE[m] = M.scale());
   const W = 1000, H = 150;
   const bw = W / L.length;
-  const avg = p.ppg;
-  const y = v => H - Math.min(v, LOG_SCALE) / LOG_SCALE * H;
+  const avg = M.avg(p), high = M.high(p);
+  const y = v => H - Math.min(v, CAP) / CAP * H;
+  const x = i => (i*bw).toFixed(2), w = Math.max(1.2, bw-.8).toFixed(2);
 
-  // Each column is stacked by WHERE the points came from, in the same red/blue/grey as
-  // the mix bar above it. That replaces colouring the whole bar green or red by whether
-  // it beat the average: the dashed average line still carries that and the caption
-  // still counts it, but a column can only say one thing at a time.
-  let above = 0, over = 0;
+  // Points are stacked by WHERE they came from, in the same red/blue/grey as the mix bar
+  // above. Rebounds and assists have no such split, so they get the encoding points had
+  // to give up: green at or above the average, red below, gold for the season high.
   const MIX = [['from twos', 'var(--acc)'], ['from threes', '#5b8dd9'],
                ['free throws', '#9aa6bd']];
-  const bars = L.map((v, i) => {
+  let above = 0, over = 0;
+  const bars = L.map((_, i) => {
+    const v = M.val(p, i);
     if (v >= avg) above++;
-    const g = (p.glog || [])[i] || [];
-    const three = (g[5] || 0) * 3, ft = g[6] || 0;
-    const parts = [Math.max(0, v - three - ft), three, ft];
-    const x = (i*bw).toFixed(2), w = Math.max(1.2, bw-.8).toFixed(2);
-    // A bar over the cap is drawn full height, so squash its segments to the cap rather
-    // than clip them -- the mix stays true even when the total cannot be shown.
-    const k = Math.min(v, LOG_SCALE) / (v || 1);
-    if (v > LOG_SCALE) over++;
-    let acc = 0, seg = '';
-    parts.forEach((val, n) => {
-      if (val <= 0) return;
-      const y0 = y(acc * k), y1 = y((acc + val) * k);
-      seg += `<rect x="${x}" y="${y1.toFixed(1)}" width="${w}"
-        height="${Math.max(0.6, y0 - y1).toFixed(1)}" fill="${MIX[n][1]}"/>`;
-      acc += val;
-    });
-    if (v > LOG_SCALE) seg += `<rect x="${x}" y="0" width="${w}" height="3"
+    if (v > CAP) over++;
+    let seg = '';
+    if (m === 'reb' || m === 'ast'){
+      const yy = y(v);
+      seg = `<rect x="${x(i)}" y="${yy.toFixed(1)}" width="${w}"
+        height="${Math.max(0.6, H - yy).toFixed(1)}" rx="1.5"
+        fill="${v >= high ? 'var(--gold)' : v >= avg ? 'var(--win)' : 'var(--loss)'}"
+        opacity="${v >= high ? 1 : .82}"/>`;
+    } else {
+      const g = (p.glog || [])[i] || [];
+      const three = (g[5] || 0) * 3, ft = g[6] || 0;
+      // A bar over the cap is drawn full height, so squash its segments to the cap rather
+      // than clip them -- the mix stays true even when the total cannot be shown.
+      const k = Math.min(v, CAP) / (v || 1);
+      let acc = 0;
+      [Math.max(0, v - three - ft), three, ft].forEach((val, n) => {
+        if (val <= 0) return;
+        const y0 = y(acc * k), y1 = y((acc + val) * k);
+        seg += `<rect x="${x(i)}" y="${y1.toFixed(1)}" width="${w}"
+          height="${Math.max(0.6, y0 - y1).toFixed(1)}" fill="${MIX[n][1]}"/>`;
+        acc += val;
+      });
+      // The best night keeps its gold, as a cap rather than a whole bar it would recolour.
+      if (v >= high) seg += `<rect x="${x(i)}" y="${(v > CAP ? 3.4 : y(v)).toFixed(1)}"
+        width="${w}" height="3" fill="var(--gold)"/>`;
+    }
+    if (v > CAP) seg += `<rect x="${x(i)}" y="0" width="${w}" height="3"
       fill="var(--ink)"/>`;
-    // The best night keeps its gold, as a cap rather than a whole bar it would recolour.
-    if (v >= p.highs.pts) seg += `<rect x="${x}" y="${(v > LOG_SCALE ? 3.4 : y(v)).toFixed(1)}"
-      width="${w}" height="3" fill="var(--gold)"/>`;
     return seg;
   }).join('');
 
   let grid = '';
-  for (let v = 20; v < LOG_SCALE; v += 20){
+  for (let v = M.step; v < CAP; v += M.step){
     grid += `<line x1="0" y1="${y(v).toFixed(1)}" x2="${W}" y2="${y(v).toFixed(1)}"
       stroke="rgba(150,166,205,.12)" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
   }
@@ -612,8 +671,18 @@ function logSvg(p){
   const lab = (v, txt, cls) =>
     `<span class="arclbl ${cls||''}" style="top:${(y(v)/H*100).toFixed(2)}%">${txt}</span>`;
   let labels = '';
-  for (let v = 20; v <= LOG_SCALE; v += 20) labels += lab(v, v);
+  for (let v = M.step; v <= CAP; v += M.step) labels += lab(v, v);
   labels += lab(avg, avg, 'zero');
+
+  const key = (m === 'reb' || m === 'ast')
+    ? `<span><i class="dot" style="background:var(--win)"></i>at or above ${avg}
+         <b>${above}</b></span>
+       <span><i class="dot" style="background:var(--loss)"></i>below
+         <b>${L.length - above}</b></span>`
+    : MIX.map(k => `<span><i class="dot" style="background:${k[1]}"></i>${k[0]}</span>`).join('');
+  const tail = (m === 'reb' || m === 'ast')
+    ? `game 1 → ${L.length} · same 0–${CAP} scale on every card`
+    : `<b>${above}</b> of ${L.length} at or above ${avg} · same 0–${CAP} scale on every card`;
 
   return `<div class="arcbox loghook">${labels}
   <svg class="log" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
@@ -623,13 +692,21 @@ function logSvg(p){
       stroke="rgba(232,236,245,.6)" stroke-width="1.1" stroke-dasharray="5 4"
       vector-effect="non-scaling-stroke"/>
   </svg></div>
-  <div class="mixlab" style="margin-top:4px">
-    ${MIX.map(m => `<span><i class="dot" style="background:${m[1]}"></i>${m[0]}</span>`).join('')}
-    <span><i class="dot" style="background:var(--gold)"></i>best night
-      <b>${p.highs.pts}</b>${over ? ' — above the scale' : ''}</span>
-    <span style="margin-left:auto;color:var(--dim)"><b>${above}</b> of ${L.length} at or
-      above ${avg} · same 0–${LOG_SCALE} scale on every card</span>
+  <div class="mixlab" style="margin-top:4px">${key}
+    <span><i class="dot" style="background:var(--gold)"></i>best
+      <b>${high}</b>${over ? ' — above the scale' : ''}</span>
+    <span style="margin-left:auto;color:var(--dim)">${tail}</span>
   </div>`;
+}
+
+/* The header carries the tabs, so switching metric replaces this whole block. */
+function logPanel(p, m){
+  return `<div class="loghd">
+    <span class="kick">Every game, ${(METRICS[m] || METRICS.pts).name}</span>
+    <span class="ltabs">${Object.keys(METRICS).map(k =>
+      `<button class="ltab ${k === m ? 'on' : ''}" onclick="setMetric('${k}')"
+        >${METRICS[k].tab}</button>`).join('')}</span>
+  </div>${logSvg(p, m)}`;
 }
 
 /* Every shot of the season, binned to a 32x32 grid of 1.6ft cells.
@@ -666,10 +743,13 @@ function shotChart(p){
     return `<circle cx="${SX(c).toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}"
       fill="${hot(c.m/c.a)}" fill-opacity=".88"/>`;
   }).join('');
-  const pct=(100*S.made/S.att).toFixed(1), p3=S.t3?(100*S.m3/S.t3).toFixed(1):null;
+  // The two percentages that used to sit here are already on this card, in the FIELD
+  // GOALS and THREE POINT boxes a few pixels to the right. Repeating them cost the header
+  // a second and third line once the cold->hot ramp moved up into it.
   return `<div class="panel col" style="padding:10px 12px">
     <div class="courthd"><span class="kick">Every shot he took</span>
-      <span>${S.att} shots · <b>${pct}%</b>${p3 ? ` · ${p3}% from three` : ''}</span></div>
+      <span class="cramp"><span class="hotbar"></span>cold → hot</span>
+      <span class="cstat"><b>${S.att}</b> shots</span></div>
     <svg class="court" viewBox="0 150 500 330" preserveAspectRatio="xMidYMid meet">
       <!-- Real NBA half court, in tenths of a foot, mapped as sx = courtX + 250 and
            sy = 430 - courtY, so the hoop sits at (250,430). Court 50ft wide, baseline
@@ -685,7 +765,6 @@ function shotChart(p){
       <circle class="line" cx="250" cy="430" r="7.5"/>
       ${dots}
     </svg>
-    <div class="hotlab"><span class="hotbar"></span><span>cold → hot</span></div>
   </div>`;
 }
 
@@ -830,7 +909,8 @@ function playerCard(p){
           </div>
         </div>
         <div class="shot">
-          <div class="rankno">${String(p.rank).padStart(2,'0')}</div>
+          <div class="rankno">${p.jersey ? esc(p.jersey) : String(p.rank).padStart(2,'0')}</div>
+          <div class="rankchip"><b>${p.rank}</b><span>by points</span></div>
           <img src="${head(p.id)}" alt="${esc(p.name)}" loading="lazy"
                onerror="this.style.display='none'">
         </div>
@@ -857,9 +937,8 @@ function playerCard(p){
           <div class="kick" style="margin-bottom:6px">Where the points came from</div>
           ${mixBar(p)}
         </div>
-        <div class="panel logwrap" style="padding:13px 15px">
-          <div class="kick" style="margin-bottom:6px">Every game, points scored</div>
-          ${logSvg(p)}
+        <div class="panel logwrap" style="padding:13px 15px" data-metric="${METRIC}">
+          ${logPanel(p, METRIC)}
         </div>
         ${p.po ? `<div class="box"><div class="kv">
           <div><div class="v">${p.po.gp}</div><div class="k">Playoff games</div></div>
@@ -1113,6 +1192,25 @@ function showTip(html, x, y){
 }
 function hideTip(){ TIP.classList.remove('on'); }
 
+function setMetric(m){
+  if (!METRICS[m]) return;
+  METRIC = m;
+  try { localStorage.setItem('nba.metric', m); } catch(e) {}
+  paintLog(cur);
+}
+/* Re-rendering all 100 charts on every switch is wasteful, so a card is brought up to
+   date when you land on it. paint() calls this. */
+function paintLog(i){
+  const c = CARDS[i];
+  if (!c || c.kind !== 'player') return;
+  const el = cards[i] && cards[i].querySelector('.logwrap');
+  if (!el || el.dataset.metric === METRIC) return;
+  el.innerHTML = logPanel(c.p, METRIC);
+  el.dataset.metric = METRIC;
+  clearHl();
+  hideTip();
+}
+
 let hlEl = null;
 function clearHl(){ if (hlEl){ hlEl.setAttribute('width', 0); hlEl = null; } }
 
@@ -1189,6 +1287,7 @@ function paint(){
   const want = '#' + (cur + 1);
   if (location.hash !== want) history.replaceState(null, '', want);
   try { localStorage.setItem('nba.card', cur); } catch(e) {}
+  paintLog(cur);
 }
 function go(i, smooth = true){
   cur = Math.max(0, Math.min(CARDS.length - 1, i));
