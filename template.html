@@ -160,6 +160,7 @@ a{color:inherit}
 .pright .logwrap{flex:1 1 auto;min-height:120px}
 .logwrap{flex:1 1 auto;min-height:90px;display:flex;flex-direction:column}
 .log{width:100%;flex:1 1 auto;min-height:0;display:block;overflow:visible}
+.logwrap .arcbox{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 .pbot{display:grid;gap:11px;min-height:0;flex:1 1 auto}
 .pbot.two{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}
 .pbot .col{display:flex;flex-direction:column;gap:11px;min-height:0}
@@ -502,41 +503,72 @@ function arcSvg(t){
   </div>`;
 }
 
-/* Points scored in every game, in order, with the average as a line. */
+/* Points scored in every game, in order, with the average as a line.
+
+   ONE SCALE FOR EVERY PLAYER, so flipping between cards compares real numbers. Scaling
+   each card to its own best night made a 29-point high draw exactly like an 83-point
+   one. The cap covers 99% of the deck's season highs rather than the outright maximum:
+   87 of 100 players top out under 50 and only Bam Adebayo's 83 exceeds 60, so a true
+   max would flatten every other card for one game. The single bar that does exceed the
+   cap is drawn full height and flagged, not silently clipped. */
+const LOG_SCALE = (() => {
+  const highs = D.players.map(p => p.highs.pts).sort((a, b) => a - b);
+  if (!highs.length) return 60;
+  const p99 = highs[Math.floor(highs.length * 0.99) - 1] || highs[highs.length - 1];
+  return Math.max(30, Math.ceil(p99 / 10) * 10);
+})();
+
 function logSvg(p){
   const L = p.log || [];
   if (!L.length) return '';
-  const W = 1000, H = 150, max = Math.max(...L, 10);
+  const W = 1000, H = 150;
   const bw = W / L.length;
   const avg = p.ppg;
-  // Three states, so the line does the reading for you: a quiet night is red, a night
-  // at or above his own average is green, and his best of the season is gold. Ties on
-  // the high all go gold -- there can legitimately be more than one.
-  let below = 0, above = 0, best = 0;
+  const y = v => H - Math.min(v, LOG_SCALE) / LOG_SCALE * H;
+
+  let below = 0, above = 0, best = 0, over = 0;
   const bars = L.map((v, i) => {
-    const h = v / max * H;
     const top = v >= p.highs.pts;
     const up = v >= avg;
     if (top) best++; else if (up) above++; else below++;
+    if (v > LOG_SCALE) over++;
+    const yy = y(v);
     const fill = top ? 'var(--gold)' : up ? 'var(--win)' : 'var(--loss)';
-    return `<rect x="${(i*bw).toFixed(2)}" y="${(H-h).toFixed(1)}"
-      width="${Math.max(1.2, bw-.8).toFixed(2)}" height="${h.toFixed(1)}" rx="1.5"
-      fill="${fill}" opacity="${top ? 1 : .82}"/>`;
+    return `<rect x="${(i*bw).toFixed(2)}" y="${yy.toFixed(1)}"
+      width="${Math.max(1.2, bw-.8).toFixed(2)}" height="${(H-yy).toFixed(1)}" rx="1.5"
+      fill="${fill}" opacity="${top ? 1 : .82}"/>`
+      + (v > LOG_SCALE ? `<rect x="${(i*bw).toFixed(2)}" y="0"
+          width="${Math.max(1.2, bw-.8).toFixed(2)}" height="3" fill="var(--ink)"/>` : '');
   }).join('');
-  const ay = H - avg / max * H;
-  return `<svg class="log" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-    ${bars}
-    <line x1="0" y1="${ay.toFixed(1)}" x2="${W}" y2="${ay.toFixed(1)}"
+
+  let grid = '';
+  for (let v = 20; v < LOG_SCALE; v += 20){
+    grid += `<line x1="0" y1="${y(v).toFixed(1)}" x2="${W}" y2="${y(v).toFixed(1)}"
+      stroke="rgba(150,166,205,.12)" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+  }
+
+  // Labels are HTML: this svg is preserveAspectRatio="none", which stretches glyphs.
+  const lab = (v, txt, cls) =>
+    `<span class="arclbl ${cls||''}" style="top:${(y(v)/H*100).toFixed(2)}%">${txt}</span>`;
+  let labels = '';
+  for (let v = 20; v <= LOG_SCALE; v += 20) labels += lab(v, v);
+  labels += lab(avg, avg, 'zero');
+
+  return `<div class="arcbox">${labels}
+  <svg class="log" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    ${grid}${bars}
+    <line x1="0" y1="${y(avg).toFixed(1)}" x2="${W}" y2="${y(avg).toFixed(1)}"
       stroke="rgba(232,236,245,.6)" stroke-width="1.1" stroke-dasharray="5 4"
       vector-effect="non-scaling-stroke"/>
-  </svg>
-  <div class="mixlab" style="margin-top:5px">
+  </svg></div>
+  <div class="mixlab" style="margin-top:4px">
     <span><i class="dot" style="background:var(--win)"></i>at or above ${avg}
       <b>${above + best}</b></span>
     <span><i class="dot" style="background:var(--loss)"></i>below <b>${below}</b></span>
     <span><i class="dot" style="background:var(--gold)"></i>best night
-      <b>${p.highs.pts}</b></span>
-    <span style="margin-left:auto;color:var(--dim)">game 1 → ${L.length}</span>
+      <b>${p.highs.pts}</b>${over ? ' — above the scale' : ''}</span>
+    <span style="margin-left:auto;color:var(--dim)">game 1 → ${L.length} ·
+      same 0–${LOG_SCALE} scale on every card</span>
   </div>`;
 }
 
