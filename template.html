@@ -76,6 +76,11 @@ a{color:inherit}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .v{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25}
 .v small{font-size:11px;font-weight:300;color:var(--dim)}
+/* A shooting percentage gets a pie of itself beside the number, in the same red / blue /
+   grey the points mix uses, so the three rates are comparable at a glance instead of
+   being three numbers you have to hold in your head. */
+.v.vg{display:flex;align-items:center;gap:7px}
+.pie{width:20px;height:20px;flex:0 0 auto;display:block}
 
 /* ---------- team card ---------- */
 .tgrid{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:37% 1fr;gap:14px}
@@ -500,16 +505,26 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g,
 const sgn = n => (n > 0 ? '+' : '') + n;
 
 /* ---------- card list ---------- */
-const CARDS = [{kind:'cover'}]
-  .concat(D.teams.map(t => ({kind:'team', t})))
-  .concat(D.players.map(p => ({kind:'player', p})))
-  .concat([{kind:'race'}, {kind:'ladder'}, {kind:'volume'}, {kind:'nights'}]);
+/* Cover, then the players and the charts that are ABOUT players, then the teams and the
+   chart that is about teams. The charts are split by their subject, not kept in one lump
+   at the end: the scoring race, the shot diet and the biggest nights all rank players,
+   the ladder ranks teams. */
+const PCHARTS = ['race', 'volume', 'nights'];
+const TCHARTS = ['ladder'];
 
+const CARDS = [{kind:'cover'}]
+  .concat(D.players.map(p => ({kind:'player', p})))
+  .concat(PCHARTS.map(k => ({kind:k})))
+  .concat(D.teams.map(t => ({kind:'team', t})))
+  .concat(TCHARTS.map(k => ({kind:k})));
+
+/* A section with nothing in it gets no pill -- 2026-27 ships with no players at all. */
 const SECTIONS = [
-  {name:'Teams',   at:1},
-  {name:'Players', at:1 + D.teams.length},
-  {name:'Charts',  at:1 + D.teams.length + D.players.length},
-];
+  ['Players',      1, D.players.length],
+  ['Player stats', 1 + D.players.length, PCHARTS.length],
+  ['Teams',        1 + D.players.length + PCHARTS.length, D.teams.length],
+  ['Team stats',   1 + D.players.length + PCHARTS.length + D.teams.length, TCHARTS.length],
+].filter(x => x[2] > 0).map(x => ({name: x[0], at: x[1]}));
 
 /* ---------- drawing helpers ---------- */
 
@@ -970,9 +985,12 @@ function playerCard(p){
           <div><div class="v">${p.apg}</div><div class="k">Assists avg</div></div>
         </div></div>
         <div class="box"><div class="kv">
-          <div><div class="v">${p.fg}<small>%</small></div><div class="k">Field goals</div></div>
-          <div><div class="v">${p.tp}<small>%</small></div><div class="k">Three point</div></div>
-          <div><div class="v">${p.ft}<small>%</small></div><div class="k">Free throws</div></div>
+          <div><div class="v vg">${pie(p.fg,'var(--acc)')}<span>${p.fg}<small>%</small></span></div>
+            <div class="k">Field goals</div></div>
+          <div><div class="v vg">${pie(p.tp,'#5b8dd9')}<span>${p.tp}<small>%</small></span></div>
+            <div class="k">Three point</div></div>
+          <div><div class="v vg">${pie(p.ft,'#9aa6bd')}<span>${p.ft}<small>%</small></span></div>
+            <div class="k">Free throws</div></div>
           <div><div class="v">${p.dd}</div><div class="k">Double-doubles</div></div>
           <div><div class="v">${p.td}</div><div class="k">Triple-doubles</div></div>
           <div><div class="v">${p.highs.pts}</div><div class="k">Best night</div></div>
@@ -1057,6 +1075,21 @@ function ladderCard(){
         <div class="kick" style="margin-bottom:6px">West</div>${col('West')}</div>
     </div>
   </div>`;
+}
+
+/* A filled wedge, not a ring: at 20px a wedge reads as "a bit under half" far better. */
+function pie(pct, colour){
+  const p = Math.max(0, Math.min(100, +pct || 0));
+  const a = 2 * Math.PI * (p / 100) - Math.PI / 2;
+  const x = 12 + 10 * Math.cos(a), y = 12 + 10 * Math.sin(a);
+  return `<svg class="pie" viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" fill="rgba(150,166,205,.16)"/>
+    ${p >= 99.9
+      ? `<circle cx="12" cy="12" r="10" fill="${colour}"/>`
+      : p <= 0 ? ''
+      : `<path d="M12 12 L12 2 A10 10 0 ${p > 50 ? 1 : 0} 1 ${x.toFixed(2)} ${y.toFixed(2)} Z"
+           fill="${colour}"/>`}
+  </svg>`;
 }
 
 /* ---------- the biggest nights ---------- */
@@ -1392,10 +1425,11 @@ const INDEX = CARDS.map((c,i) => {
          sub = 'chart'; }
   const group = c.kind === 'team' ? 'Teams'
               : c.kind === 'player' ? 'Players'
-              : c.kind === 'cover' ? 'Start' : 'Charts';
+              : c.kind === 'cover' ? 'Start'
+              : TCHARTS.includes(c.kind) ? 'Team stats' : 'Player stats';
   return {i, group, label: short || label(i), sub, key: s.toLowerCase()};
 });
-const JGROUPS = ['Start', 'Teams', 'Players', 'Charts'];
+const JGROUPS = ['Start', 'Players', 'Player stats', 'Teams', 'Team stats'];
 let jsel = 0;
 function drawJump(q){
   q = q.trim().toLowerCase();

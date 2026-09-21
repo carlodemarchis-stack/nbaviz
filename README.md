@@ -2,8 +2,9 @@
 
 The NBA entry in the AGWAS sport-viz family. One app, two ways to read a season:
 
-- **`index.html` — the Film.** 135 cards: a cover, one per franchise in order of record,
-  the 100 leading scorers, then four charts. Horizontal, deep-linkable, keyboard-driven.
+- **`index.html` — the Film.** 135 cards, in five sections: a cover, the 100 leading
+  scorers, the three charts that rank players, the 30 franchises in order of record, then
+  the chart that ranks teams. Horizontal, deep-linkable, keyboard-driven.
 - **`towers.html` — the Towers.** All 30 teams as vertical stacks on a shared baseline:
   **wins build up, losses hang down, games still to play hang from the ceiling.**
   A slider replays the season game by game and the teams re-sort live.
