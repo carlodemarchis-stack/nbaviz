@@ -145,6 +145,7 @@ a{color:inherit}
 .pname{font-size:clamp(21px,2.4vw,33px);font-weight:700;line-height:1.03;letter-spacing:-.015em}
 .psub{font-size:11.5px;color:var(--dim);margin-top:2px}
 .pleft,.pright{display:flex;flex-direction:column;gap:11px;min-height:0}
+.pleft{gap:8px}
 /* Portrait takes the top half of the left column and the shot chart sits under it,
    which hands the whole right column to the stats and the game-by-game chart. */
 .pleft{overflow:hidden}
@@ -154,7 +155,7 @@ a{color:inherit}
    the svg falls back to its intrinsic aspect height -- which runs off the card. */
 .pleft > .panel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;
   gap:6px;overflow:hidden}
-.pbio{font-size:10.5px;color:var(--dim);line-height:1.45;margin-top:3px}
+.pbio{font-size:10px;color:var(--dim);line-height:1.35;margin-top:2px}
 /* The game-by-game chart is the point of this card, so it gets the slack. */
 .pright .logwrap{flex:1 1 auto;min-height:120px}
 .logwrap{flex:1 1 auto;min-height:90px;display:flex;flex-direction:column}
@@ -163,10 +164,14 @@ a{color:inherit}
 .pbot.two{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}
 .pbot .col{display:flex;flex-direction:column;gap:11px;min-height:0}
 .court{width:100%;flex:1 1 auto;min-height:0;display:block}
+.courthd{display:flex;align-items:baseline;gap:10px;font-size:10px;color:var(--dim);
+  margin-bottom:2px}
+.courthd span:last-child{margin-left:auto;white-space:nowrap}
+.courthd b{color:var(--ink)}
 .court .line{fill:none;stroke:rgba(150,166,205,.4);stroke-width:2.2;
   vector-effect:non-scaling-stroke}
-.hotlab{display:flex;align-items:center;gap:9px;font-size:10px;color:var(--dim);margin-top:5px;
-  flex-wrap:wrap}
+.hotlab{display:flex;align-items:center;gap:8px;font-size:9.5px;color:var(--dim);
+  margin-top:2px}
 .hotbar{width:76px;height:7px;border-radius:99px;
   background:linear-gradient(90deg,#3a6fb0,#8b96ad,#e0453f)}
 .mix{display:flex;height:9px;border-radius:99px;overflow:hidden;background:var(--pan2);gap:1px}
@@ -565,13 +570,15 @@ function shotChart(p){
   const SX=c=>c.cx*16-250+8+250, SY=c=>430-(c.cy*16-50+8);
   const dots=list.sort((x,y)=>x.a-y.a).map(c=>{
     const r=3.2+9.5*Math.sqrt(c.a/max);
-    return `<circle cx="${SX(c).toFixed(1)}" cy="${SY(c).toFixed(1)}" r="${r.toFixed(1)}"
+    const cy=Math.max(156, SY(c));   // pin the rare 28ft+ heave to the top edge
+    return `<circle cx="${SX(c).toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}"
       fill="${hot(c.m/c.a)}" fill-opacity=".88"/>`;
   }).join('');
   const pct=(100*S.made/S.att).toFixed(1), p3=S.t3?(100*S.m3/S.t3).toFixed(1):null;
-  return `<div class="panel col" style="padding:13px 15px">
-    <div class="kick" style="margin-bottom:4px">Every shot he took</div>
-    <svg class="court" viewBox="0 -20 500 510" preserveAspectRatio="xMidYMid meet">
+  return `<div class="panel col" style="padding:10px 12px">
+    <div class="courthd"><span class="kick">Every shot he took</span>
+      <span>${S.att} shots · <b>${pct}%</b>${p3 ? ` · ${p3}% from three` : ''}</span></div>
+    <svg class="court" viewBox="0 150 500 330" preserveAspectRatio="xMidYMid meet">
       <!-- Real NBA half court, in tenths of a foot, mapped as sx = courtX + 250 and
            sy = 430 - courtY, so the hoop sits at (250,430). Court 50ft wide, baseline
            4.75ft behind the hoop, paint 16ft, FT line 14.25ft, arc 23.75ft, corners
@@ -586,10 +593,7 @@ function shotChart(p){
       <circle class="line" cx="250" cy="430" r="7.5"/>
       ${dots}
     </svg>
-    <div class="hotlab"><span class="hotbar"></span>
-      <span>cold → hot</span>
-      <span style="margin-left:auto">${S.att} shots · <b style="color:var(--ink)">${pct}%</b>${
-        p3?` · ${p3}% from three`:''}</span></div>
+    <div class="hotlab"><span class="hotbar"></span><span>cold → hot</span></div>
   </div>`;
 }
 
