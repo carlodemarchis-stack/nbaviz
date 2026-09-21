@@ -139,23 +139,25 @@ a{color:inherit}
              var(--pan2);border:1px solid var(--line);display:flex;align-items:flex-end}
 .shot img{width:100%;height:100%;object-fit:contain;object-position:bottom center;
   display:block;filter:drop-shadow(0 12px 28px rgba(0,0,0,.55))}
-/* The watermark is the RANK -- where he sits in a film ordered by points -- captioned so
-   a giant "2" cannot be read as a jersey. The jersey goes opposite as a small chip; it is
-   already spelled out on the meta line under his name. */
-.rankno{position:absolute;top:6px;left:12px;pointer-events:none}
-.rankno b{display:block;font-size:clamp(52px,7.4vw,104px);font-weight:700;line-height:.82;
-  color:rgba(232,236,245,.11);font-variant-numeric:tabular-nums;letter-spacing:-.03em}
-.rankno span{display:block;margin-top:5px;padding-left:3px;font-size:9.5px;
+/* Two numbers in the photo box: the JERSEY big on the right, because that is what he is
+   called on the floor, and the RANK small on the left, captioned, because a bare number
+   is ambiguous and the ordering is the film's, not his. Both are watermarks behind the
+   cutout; sized by the box itself so they scale with it. */
+.jerseyno{position:absolute;top:6px;right:15px;pointer-events:none;font-weight:700;
+  line-height:.82;color:rgba(232,236,245,.11);font-variant-numeric:tabular-nums;
+  letter-spacing:-.03em;font-size:clamp(52px,7.4vw,104px)}
+.rankno{position:absolute;top:8px;left:13px;pointer-events:none}
+.rankno b{display:block;font-weight:700;line-height:.82;color:rgba(232,236,245,.13);
+  font-variant-numeric:tabular-nums;letter-spacing:-.03em;font-size:clamp(26px,3.7vw,52px)}
+.rankno span{display:block;margin-top:4px;padding-left:2px;font-size:9px;
   letter-spacing:.17em;text-transform:uppercase;color:rgba(150,166,205,.42)}
-/* As big as the photo box allows: bounded by its height AND its width, because the number
-   is one, two, or -- for rank 100 alone -- three digits, which gets a narrower budget set
-   inline. The clamp above stays as the fallback without size container queries. */
+/* Bounded by the box's height AND its width -- the jersey is one or two digits, the rank
+   one to three (only rank 100 is three, and it gets a narrower budget inline). The
+   clamps above are the fallback without size container queries. */
 @supports (container-type: size){
-  .rankno b{font-size:min(82cqh, var(--rw, 46cqw))}
+  .jerseyno{font-size:min(74cqh, 42cqw)}
+  .rankno b{font-size:min(41cqh, var(--rw, 23cqw))}
 }
-.rankchip{position:absolute;top:11px;right:14px;pointer-events:none;font-size:19px;
-  font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
-  color:rgba(232,236,245,.6)}
 
 /* Points / Rebounds / Assists over the same game chart. */
 /* Title + Split/Avg + Points/Rebounds/Assists fit on one line in the card's right column
@@ -356,7 +358,8 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
   #topbar{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;gap:8px}
   #topbar::-webkit-scrollbar{display:none}
   #ctx,#credit{display:none}
-  .rankno b{font-size:min(82cqh, var(--rw, 46cqw))}
+  .jerseyno{font-size:min(74cqh,42cqw)}
+  .rankno b{font-size:min(41cqh, var(--rw, 23cqw))}
 }
 </style>
 </head>
@@ -944,9 +947,9 @@ function playerCard(p){
           </div>
         </div>
         <div class="shot">
-          <div class="rankno"${p.rank >= 100 ? ' style="--rw:30cqw"' : ''}>
+          <div class="rankno"${p.rank >= 100 ? ' style="--rw:16cqw"' : ''}>
             <b>${p.rank}</b><span>by points</span></div>
-          ${p.jersey ? `<div class="rankchip">#${esc(p.jersey)}</div>` : ''}
+          ${p.jersey ? `<div class="jerseyno">${esc(p.jersey)}</div>` : ''}
           <img src="${head(p.id)}" alt="${esc(p.name)}" loading="lazy"
                onerror="this.style.display='none'">
         </div>
