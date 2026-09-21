@@ -110,6 +110,12 @@ and that all 6,908 game-log pointers resolve to a game played on the right date.
   checks every pointer lands on a game played on that log entry's date. The same entry
   carries that night's threes and free throws, which is what stacks the game chart into
   2PT / 3PT / FT; everything left over came from twos.
+- **The portrait watermark is sized by the photo box**, via a size container query on
+  `.shot` (`min(74cqh, 42cqw)`) — bounded by height *and* width, because the number is one
+  or two digits. The `clamp()` above it is the fallback.
+- **The player's number, team and bio are ONE line**, truncated rather than wrapped. A
+  traded player shows his split (`LAC 44 → CLE 26`) instead of the current team's full
+  name, which is what used to push five of the hundred past the end of the line.
 - **The portrait watermark is the jersey number, not the rank.** The rank is the film's
   ordering, so it sits opposite as a small chip rather than as the giant number.
 - **The points chart has a Split / Avg switch** beside its title: Split stacks each column
@@ -122,6 +128,10 @@ and that all 6,908 game-log pointers resolve to a game played on the right date.
   so `paint()` calls `paintLog(cur)` and each card catches up when you land on it.
 - **The biggest-nights columns drop their names below 1180px.** 100 columns need about
   1200px before a 9px vertical name fits in one; narrower, it renders as glyph slices.
+- **Mobile overrides for the left column need TWO classes.** `.pleft .shot` and
+  `.pleft > .panel` are two-class selectors, so a bare `.shot{min-height:44vh}` in the
+  media query never applied: on a phone the portrait was sized as half of a column with no
+  definite height, and the court svg drew 240px tall inside a 118px panel.
 - **On mobile the cards are a flex column, not a one-column grid.** The grid box has a
   definite height, so auto rows share it and a `min-height:0` column collapses to 0px
   while its content spills over the next one.

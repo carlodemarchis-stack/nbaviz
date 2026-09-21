@@ -134,16 +134,22 @@ a{color:inherit}
 
 /* ---------- player card ---------- */
 .pgrid{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:33% 1fr;gap:16px}
-.shot{position:relative;flex:1 1 auto;min-height:0;border-radius:18px;overflow:hidden;
+.shot{container-type:size;position:relative;flex:1 1 auto;min-height:0;border-radius:18px;overflow:hidden;
   background:radial-gradient(120% 90% at 50% 8%,rgba(255,255,255,.07),transparent 62%),
              var(--pan2);border:1px solid var(--line);display:flex;align-items:flex-end}
 .shot img{width:100%;height:100%;object-fit:contain;object-position:bottom center;
   display:block;filter:drop-shadow(0 12px 28px rgba(0,0,0,.55))}
 /* The watermark is the JERSEY number -- it is what he is called on the floor. The rank
    is the film's ordering, not his identity, so it sits opposite as a small chip. */
-.rankno{position:absolute;top:8px;left:14px;font-size:clamp(52px,7.4vw,104px);
+.rankno{position:absolute;top:6px;left:12px;font-size:clamp(52px,7.4vw,104px);
   font-weight:700;line-height:.82;color:rgba(232,236,245,.10);
   font-variant-numeric:tabular-nums;letter-spacing:-.03em;pointer-events:none}
+/* As big as the photo box allows: bounded by its height AND by its width, because the
+   number is one, two or three digits. The clamp above stays as the fallback for anything
+   without size container queries. */
+@supports (container-type: size){
+  .rankno{font-size:min(74cqh, 42cqw)}
+}
 .rankchip{position:absolute;top:11px;right:13px;text-align:right;pointer-events:none;
   line-height:1.1}
 .rankchip b{display:block;font-size:19px;font-weight:700;letter-spacing:-.02em;
@@ -168,7 +174,12 @@ a{color:inherit}
 .pmeta{display:flex;align-items:center;gap:11px}
 .pmeta img{width:34px;height:34px;flex:0 0 auto}
 .pname{font-size:clamp(21px,2.4vw,33px);font-weight:700;line-height:1.03;letter-spacing:-.015em}
-.psub{font-size:11.5px;color:var(--dim);margin-top:2px}
+/* Team, number and bio on ONE line -- it used to be two, and the second line came
+   straight off the shot chart below. Truncated rather than wrapped: a second line is
+   exactly what this is meant to avoid. */
+.psub{font-size:11.5px;color:var(--dim);margin-top:3px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.psub .pdim{color:rgba(139,150,173,.72)}
 .pleft,.pright{display:flex;flex-direction:column;gap:11px;min-height:0}
 .pleft{gap:8px}
 /* Portrait takes the top half of the left column and the shot chart sits under it,
@@ -180,7 +191,6 @@ a{color:inherit}
    the svg falls back to its intrinsic aspect height -- which runs off the card. */
 .pleft > .panel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;
   gap:6px;overflow:hidden}
-.pbio{font-size:10px;color:var(--dim);line-height:1.35;margin-top:2px}
 /* The game-by-game chart is the point of this card, so it gets the slack. */
 .pright .logwrap{flex:1 1 auto;min-height:120px}
 .logwrap{flex:1 1 auto;min-height:90px;display:flex;flex-direction:column}
@@ -328,10 +338,15 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
   .tgrid,.pgrid{display:flex;flex-direction:column;gap:14px;overflow:visible}
   .tid,.tright,.pleft,.pright,.tcol,.rost,.rgrid{overflow:visible;min-height:auto;
     flex:0 0 auto}
-  .shot{flex:0 0 auto}
   .pbot,.pbot.two{grid-template-columns:1fr}
-  .court{min-height:240px}
-  .shot{min-height:44vh}
+  /* These must out-specify `.pleft .shot{flex:0 0 50%;min-height:0}` and
+     `.pleft > .panel{flex:1 1 auto;min-height:0}`, which are two-class selectors. They
+     did not, so on a phone the portrait was sized as half of a column that no longer
+     has a definite height, and the court svg drew 240px tall inside a 118px panel --
+     the dots spilled out past the panel's own rounded border. */
+  .pleft .shot{flex:0 0 auto;min-height:44vh}
+  .pleft > .panel{flex:0 0 auto}
+  .pleft .court{flex:0 0 auto;height:auto;min-height:240px}
   .shot img{object-fit:contain}
   .ladder{grid-template-columns:1fr;overflow:visible}
   .lcol{overflow:visible}
@@ -341,7 +356,7 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
   #topbar{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;gap:8px}
   #topbar::-webkit-scrollbar{display:none}
   #ctx,#credit{display:none}
-  .rankno{font-size:54px}
+  .rankno{font-size:min(74cqh,42cqw)}
 }
 </style>
 </head>
@@ -922,10 +937,10 @@ function playerCard(p){
           <img src="${crest(p.team)}" alt="${esc(p.team)}" loading="lazy">
           <div style="min-width:0">
             <div class="pname">${esc(p.name)}</div>
-            <div class="psub">${p.jersey ? '#' + esc(p.jersey) + ' · ' : ''}${esc(t.name || p.team)}
-              ${traded ? `<span style="color:var(--acc)"> · traded mid-season</span>` : ''}</div>
-            <div class="pbio">${esc(bio)}${traded ? ` · ${p.teams.map(x =>
-              `${esc(x.t)} ${x.g}`).join(' · ')}` : ''}</div>
+            <div class="psub">${p.jersey ? '#' + esc(p.jersey) + ' · ' : ''}${traded
+              ? `<span style="color:var(--acc)">${p.teams.map(x =>
+                  `${esc(x.t)} ${x.g}`).join(' → ')}</span>`
+              : esc(t.name || p.team)}<span class="pdim"> · ${esc(bio)}</span></div>
           </div>
         </div>
         <div class="shot">
@@ -953,6 +968,12 @@ function playerCard(p){
           <div><div class="v">${p.td}</div><div class="k">Triple-doubles</div></div>
           <div><div class="v">${p.highs.pts}</div><div class="k">Best night</div></div>
         </div></div>
+        ${p.po ? `<div class="box"><div class="kv">
+          <div><div class="v">${p.po.gp}</div><div class="k">Playoff games</div></div>
+          <div><div class="v">${p.po.ppg}</div><div class="k">Playoff points avg</div></div>
+          <div><div class="v">${p.po.rpg}</div><div class="k">Playoff rebounds avg</div></div>
+          <div><div class="v">${p.po.apg}</div><div class="k">Playoff assists avg</div></div>
+        </div></div>` : ''}
         <div class="panel" style="padding:12px 15px;flex:0 0 auto">
           <div class="kick" style="margin-bottom:6px">Where the points came from</div>
           ${mixBar(p)}
@@ -960,12 +981,6 @@ function playerCard(p){
         <div class="panel logwrap" style="padding:13px 15px" data-metric="${METRIC}:${LOGMODE}">
           ${logPanel(p, METRIC)}
         </div>
-        ${p.po ? `<div class="box"><div class="kv">
-          <div><div class="v">${p.po.gp}</div><div class="k">Playoff games</div></div>
-          <div><div class="v">${p.po.ppg}</div><div class="k">Playoff points avg</div></div>
-          <div><div class="v">${p.po.rpg}</div><div class="k">Playoff rebounds avg</div></div>
-          <div><div class="v">${p.po.apg}</div><div class="k">Playoff assists avg</div></div>
-        </div></div>` : ''}
       </div>
     </div>
   </div>`;
