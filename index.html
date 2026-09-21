@@ -131,7 +131,7 @@ a{color:inherit}
 .rrow.hd i{font-style:normal;opacity:.6;font-size:8px;margin-left:2px}
 
 /* ---------- player card ---------- */
-.pgrid{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:38% 1fr;gap:16px}
+.pgrid{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:33% 1fr;gap:16px}
 .shot{position:relative;flex:1 1 auto;min-height:0;border-radius:18px;overflow:hidden;
   background:radial-gradient(120% 90% at 50% 8%,rgba(255,255,255,.07),transparent 62%),
              var(--pan2);border:1px solid var(--line);display:flex;align-items:flex-end}
@@ -145,6 +145,18 @@ a{color:inherit}
 .pname{font-size:clamp(21px,2.4vw,33px);font-weight:700;line-height:1.03;letter-spacing:-.015em}
 .psub{font-size:11.5px;color:var(--dim);margin-top:2px}
 .pleft,.pright{display:flex;flex-direction:column;gap:11px;min-height:0}
+/* Portrait takes the top half of the left column and the shot chart sits under it,
+   which hands the whole right column to the stats and the game-by-game chart. */
+.pleft{overflow:hidden}
+.pleft .shot{flex:0 0 50%;min-height:0}
+/* The shot-chart panel carries class .col, whose flex rule used to come from the old
+   .pbot wrapper. Without it the panel is a plain block, .court's flex does nothing and
+   the svg falls back to its intrinsic aspect height -- which runs off the card. */
+.pleft > .panel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;
+  gap:6px;overflow:hidden}
+.pbio{font-size:10.5px;color:var(--dim);line-height:1.45;margin-top:3px}
+/* The game-by-game chart is the point of this card, so it gets the slack. */
+.pright .logwrap{flex:1 1 auto;min-height:120px}
 .logwrap{flex:1 1 auto;min-height:90px;display:flex;flex-direction:column}
 .log{width:100%;flex:1 1 auto;min-height:0;display:block;overflow:visible}
 .pbot{display:grid;gap:11px;min-height:0;flex:1 1 auto}
@@ -226,8 +238,11 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
      that height and the left column -- which still carries min-height:0 -- collapses to
      0px while its content spills over the right column. A flex column takes natural
      heights and lets the card scroll instead. */
-  .tgrid,.pgrid{display:flex;flex-direction:column;gap:14px;
-    overflow-y:auto;overscroll-behavior:contain}
+  /* Any card may exceed a phone screen, so the card body itself scrolls. Without this
+     the chart cards (which have no .tgrid/.pgrid) simply overflowed with no scroller,
+     because their inner ones are released below. */
+  .in{overflow-y:auto;overscroll-behavior:contain;min-height:0}
+  .tgrid,.pgrid{display:flex;flex-direction:column;gap:14px;overflow:visible}
   .tid,.tright,.pleft,.pright,.tcol,.rost,.rgrid{overflow:visible;min-height:auto;
     flex:0 0 auto}
   .shot{flex:0 0 auto}
@@ -707,6 +722,8 @@ function playerCard(p){
             <div class="pname">${esc(p.name)}</div>
             <div class="psub">${p.jersey ? '#' + esc(p.jersey) + ' · ' : ''}${esc(t.name || p.team)}
               ${traded ? `<span style="color:var(--acc)"> · traded mid-season</span>` : ''}</div>
+            <div class="pbio">${esc(bio)}${traded ? ` · ${p.teams.map(x =>
+              `${esc(x.t)} ${x.g}`).join(' · ')}` : ''}</div>
           </div>
         </div>
         <div class="shot">
@@ -714,10 +731,7 @@ function playerCard(p){
           <img src="${head(p.id)}" alt="${esc(p.name)}" loading="lazy"
                onerror="this.style.display='none'">
         </div>
-        <div class="box" style="font-size:11.5px;color:var(--dim);line-height:1.55">${esc(bio)}
-          ${traded ? `<div style="margin-top:4px">${p.teams.map(x =>
-            `${esc(x.t)} <b style="color:var(--ink)">${x.g}</b>`).join(' · ')} games</div>` : ''}
-        </div>
+        ${shotChart(p)}
       </div>
       <div class="pright">
         <div class="box"><div class="kv">
@@ -736,18 +750,13 @@ function playerCard(p){
           <div><div class="v">${p.td}</div><div class="k">Triple-doubles</div></div>
           <div><div class="v">${p.highs.pts}</div><div class="k">Best night</div></div>
         </div></div>
-        <div class="pbot ${p.shots ? 'two' : ''}">
-          ${shotChart(p)}
-          <div class="col">
-            <div class="panel" style="padding:13px 15px">
-              <div class="kick" style="margin-bottom:6px">Where the points came from</div>
-              ${mixBar(p)}
-            </div>
-            <div class="panel logwrap" style="padding:13px 15px">
-              <div class="kick" style="margin-bottom:6px">Every game, points scored</div>
-              ${logSvg(p)}
-            </div>
-          </div>
+        <div class="panel" style="padding:12px 15px;flex:0 0 auto">
+          <div class="kick" style="margin-bottom:6px">Where the points came from</div>
+          ${mixBar(p)}
+        </div>
+        <div class="panel logwrap" style="padding:13px 15px">
+          <div class="kick" style="margin-bottom:6px">Every game, points scored</div>
+          ${logSvg(p)}
         </div>
         ${p.po ? `<div class="box"><div class="kv">
           <div><div class="v">${p.po.gp}</div><div class="k">Playoff games</div></div>

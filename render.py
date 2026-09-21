@@ -53,6 +53,12 @@ def one_season(season, seasons):
     build(os.path.join(HERE, "template.html"),
           os.path.join(HERE, f"index-{season}.html"), payload, season)
 
+    # The previous player-card layout, kept buildable so the two can be compared live
+    # and the new one reverted by deleting template.html and renaming this back.
+    classic = os.path.join(HERE, "template-classic.html")
+    if os.path.exists(classic):
+        build(classic, os.path.join(HERE, f"classic-{season}.html"), payload, season)
+
     tow_tpl = os.path.join(HERE, "towers.html.in")
     if os.path.exists(tow_tpl):
         slim = {"season": season, "seasons": seasons,
@@ -75,7 +81,7 @@ def main(default_season):
         one_season(s, seasons)
 
     # index.html / towers.html are the landing pair: a copy of the default season.
-    for stem in ("index", "towers"):
+    for stem in ("index", "towers", "classic"):
         src = os.path.join(HERE, f"{stem}-{default_season}.html")
         if os.path.exists(src):
             with open(src) as f:
