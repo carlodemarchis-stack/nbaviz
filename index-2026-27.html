@@ -128,6 +128,7 @@ a{color:inherit}
 .rrow .n{color:var(--dim);text-align:right}
 .rrow.hd{background:none;color:var(--dim);font-size:9.5px;letter-spacing:.08em;
   text-transform:uppercase;padding-bottom:1px}
+.rrow.hd i{font-style:normal;opacity:.6;font-size:8px;margin-left:2px}
 
 /* ---------- player card ---------- */
 .pgrid{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:38% 1fr;gap:16px}
@@ -626,7 +627,8 @@ function teamCard(t){
 
   const roster = t.roster.length ? `<div class="rost panel" style="padding:12px 14px">
       <div class="rrow hd"><span>Who played</span><span class="n">G</span>
-        <span class="n">PTS</span><span class="n">REB</span><span class="n">AST</span></div>
+        <span class="n">PTS<i>avg</i></span><span class="n">REB<i>avg</i></span>
+        <span class="n">AST<i>avg</i></span></div>
       <div class="rgrid">${t.roster.map(r => {
         const nm = NAMES[r.id] || ['—',''];
         return `<div class="rrow"><span class="nm">${esc(nm[0])}<i>${esc(nm[1])}</i></span>
@@ -651,9 +653,9 @@ function teamCard(t){
         </div>
         <div class="tcol">
           <div class="box"><div class="kv">
-            <div><div class="v">${t.ppg}</div><div class="k">Scored</div></div>
-            <div><div class="v">${t.oppg}</div><div class="k">Allowed</div></div>
-            <div><div class="v">${sgn(t.diff)}</div><div class="k">Margin</div></div>
+            <div><div class="v">${t.ppg}</div><div class="k">Scored avg</div></div>
+            <div><div class="v">${t.oppg}</div><div class="k">Allowed avg</div></div>
+            <div><div class="v">${sgn(t.diff)}</div><div class="k">Margin avg</div></div>
             <div><div class="v">${t.pct}<small>%</small></div><div class="k">Won</div></div>
           </div></div>
           <div class="box"><div class="kv">
@@ -720,11 +722,11 @@ function playerCard(p){
       <div class="pright">
         <div class="box"><div class="kv">
           <div><div class="v">${p.pts}</div><div class="k">Points — no. ${p.rank}</div></div>
-          <div><div class="v">${p.ppg}</div><div class="k">Per game</div></div>
+          <div><div class="v">${p.ppg}</div><div class="k">Points avg</div></div>
           <div><div class="v">${p.gp}</div><div class="k">Games</div></div>
-          <div><div class="v">${p.mpg}</div><div class="k">Minutes</div></div>
-          <div><div class="v">${p.rpg}</div><div class="k">Rebounds</div></div>
-          <div><div class="v">${p.apg}</div><div class="k">Assists</div></div>
+          <div><div class="v">${p.mpg}</div><div class="k">Minutes avg</div></div>
+          <div><div class="v">${p.rpg}</div><div class="k">Rebounds avg</div></div>
+          <div><div class="v">${p.apg}</div><div class="k">Assists avg</div></div>
         </div></div>
         <div class="box"><div class="kv">
           <div><div class="v">${p.fg}<small>%</small></div><div class="k">Field goals</div></div>
@@ -749,9 +751,9 @@ function playerCard(p){
         </div>
         ${p.po ? `<div class="box"><div class="kv">
           <div><div class="v">${p.po.gp}</div><div class="k">Playoff games</div></div>
-          <div><div class="v">${p.po.ppg}</div><div class="k">Playoff points</div></div>
-          <div><div class="v">${p.po.rpg}</div><div class="k">Playoff rebounds</div></div>
-          <div><div class="v">${p.po.apg}</div><div class="k">Playoff assists</div></div>
+          <div><div class="v">${p.po.ppg}</div><div class="k">Playoff points avg</div></div>
+          <div><div class="v">${p.po.rpg}</div><div class="k">Playoff rebounds avg</div></div>
+          <div><div class="v">${p.po.apg}</div><div class="k">Playoff assists avg</div></div>
         </div></div>` : ''}
       </div>
     </div>
