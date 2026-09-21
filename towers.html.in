@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NBA Season Towers — __SEASON__</title>
+<meta name="description" content="Every NBA team's __SEASON__ season as a shape: wins stack up, losses hang down, games still to play hang from the ceiling.">
+<link rel="icon" href="favicon.svg">
+<style>
+:root{
+  --bg:#070910; --ink:#e8ecf5; --dim:#8b96ad;
+  --pan:rgba(255,255,255,.055); --pan2:rgba(255,255,255,.014);
+  --line:rgba(150,166,205,.14);
+  --acc:#e0453f; --gold:#f0c24a; --win:#43c07a; --loss:#e0554a;
+  --bar:46px; --ctl:58px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-weight:300;
+  -webkit-font-smoothing:antialiased}
+b{font-weight:700}
+
+#topbar{position:fixed;top:0;left:0;right:0;height:var(--bar);z-index:40;display:flex;
+  align-items:center;gap:12px;padding:0 16px;background:rgba(7,9,16,.9);
+  backdrop-filter:blur(14px);border-bottom:1px solid var(--line);font-size:12px}
+#ttl{color:var(--dim);white-space:nowrap;flex:0 0 auto}
+#ttl b{color:var(--ink)}
+.seg{display:flex;gap:5px;flex:0 0 auto}
+.pill{border:1px solid var(--line);background:var(--pan2);color:var(--dim);
+  border-radius:99px;padding:5px 12px;font-size:11.5px;cursor:pointer;text-decoration:none;
+  display:inline-block}
+.pill:hover{color:var(--ink);border-color:rgba(150,166,205,.3)}
+.pill.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
+.grow{flex:1 1 auto}
+.lab{color:var(--dim);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  margin-right:2px;flex:0 0 auto}
+
+#wrap{position:fixed;top:var(--bar);bottom:var(--ctl);left:0;right:0;overflow:auto;
+  padding:14px 16px 8px}
+.group{margin-bottom:18px}
+.ghead{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
+  margin-bottom:8px;border-bottom:1px solid var(--line);padding-bottom:5px}
+.rowt{display:flex;gap:6px;align-items:flex-end}
+
+.tw{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px}
+.stack{width:100%;position:relative;height:var(--th)}
+.up,.dn{position:absolute;left:0;right:0;display:flex;flex-direction:column-reverse}
+.up{bottom:50%;padding-bottom:1px}
+.dn{top:50%;flex-direction:column;padding-top:1px}
+.cellbox{width:100%;border-radius:1.5px;border-bottom:.5px solid rgba(7,9,16,.55)}
+.mid{position:absolute;left:-2px;right:-2px;top:50%;height:1px;z-index:3;
+  background:rgba(150,166,205,.5);transform:translateY(-.5px)}
+.fut{position:absolute;left:0;right:0;top:0;display:flex;flex-direction:column;opacity:.4}
+.tlab{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;width:100%;
+  /* FIXED height, and fixed line boxes inside it. The whole point of these towers is a
+     baseline shared by all 30 teams, and a label that grows by even 3px -- the champion's
+     star glyph did exactly this -- lifts that one team's baseline off the line. */
+  height:54px;overflow:hidden;flex:0 0 54px}
+.tlab img{width:clamp(15px,1.5vw,22px);flex:0 0 auto;
+  /* BOTH dimensions fixed, with object-fit doing the letterboxing. The crest SVGs are
+     not all square -- Houston's is portrait -- so height:auto made that one label taller
+     than its fixed 50px box and pushed the team name into the record line. */
+  height:clamp(15px,1.5vw,22px);object-fit:contain;
+  /* Brooklyn's and San Antonio's crests are black artwork; without a faint disc behind
+     them they vanish into the background entirely. */
+  background:rgba(255,255,255,.09);border-radius:50%;padding:1.5px}
+.tlab .ab{font-size:9.5px;color:var(--dim);letter-spacing:.04em;
+  line-height:12px;height:12px;overflow:hidden;white-space:nowrap}
+.tlab .rc{font-size:10.5px;font-variant-numeric:tabular-nums;white-space:nowrap;
+  line-height:13px;height:13px}
+.tw.champ .ab{color:var(--gold);font-weight:700}
+
+#ctlbar{position:fixed;bottom:0;left:0;right:0;height:var(--ctl);z-index:40;display:flex;
+  align-items:center;gap:12px;padding:0 16px;background:rgba(7,9,16,.9);
+  backdrop-filter:blur(14px);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom)}
+.ic{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);
+  background:var(--pan2);color:var(--dim);display:grid;place-items:center;cursor:pointer;
+  flex:0 0 auto}
+.ic:hover{color:var(--ink);background:var(--pan)}
+.ic svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
+#slider{flex:1 1 auto;accent-color:var(--acc);height:4px;cursor:pointer}
+#gno{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;
+  white-space:nowrap;flex:0 0 auto;min-width:118px}
+#gno b{color:var(--ink)}
+
+#tip{position:fixed;z-index:70;pointer-events:none;display:none;background:#0d1019;
+  border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:11.5px;
+  box-shadow:0 8px 26px rgba(0,0,0,.5);white-space:nowrap}
+#tip.on{display:block}
+#tip .t{color:var(--dim);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+#legend{position:fixed;right:16px;top:calc(var(--bar) + 10px);z-index:30;display:flex;
+  gap:12px;font-size:10px;color:var(--dim);background:rgba(7,9,16,.7);
+  border:1px solid var(--line);border-radius:99px;padding:5px 12px;backdrop-filter:blur(8px)}
+#legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
+.empty{color:var(--dim);font-size:12.5px;padding:6px 4px 12px;line-height:1.55;max-width:96ch}
+@media (max-width:760px){ #legend{display:none} .lab{display:none} }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div id="ttl">NBA <b>__SEASON__</b> · Season Towers</div>
+  <div class="seg">
+    <a class="pill" id="filmlink" href="index.html">Film</a>
+    <span class="pill on">Towers</span>
+  </div>
+  <span class="lab">Season</span><div class="seg" id="seasons"></div>
+  <div class="grow"></div>
+  <span class="lab">Group</span><div class="seg" id="groups"></div>
+  <span class="lab">Order</span><div class="seg" id="sorts"></div>
+</div>
+
+<div id="legend">
+  <span><i style="background:var(--win)"></i>win</span>
+  <span><i style="background:var(--loss)"></i>loss</span>
+  <span><i style="background:rgba(150,166,205,.45)"></i>still to play</span>
+</div>
+
+<div id="wrap"></div>
+<div id="tip"></div>
+
+<div id="ctlbar">
+  <button class="ic" title="Back to game 1" onclick="setG(1)"><svg viewBox="0 0 24 24"><path d="M19 5v14M15 12 8 6v12z"/></svg></button>
+  <button class="ic" id="playb" title="Play the season" onclick="togglePlay()"><svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg></button>
+  <button class="ic" title="Whole season" onclick="setG(MAXG)"><svg viewBox="0 0 24 24"><path d="M5 5v14M9 12l7-6v12z" transform="scale(-1,1) translate(-24,0)"/></svg></button>
+  <input type="range" id="slider" min="1" max="82" value="82" aria-label="Game number">
+  <div id="gno"></div>
+</div>
+
+<script>
+const D = /*__DATA__*/{};
+const SEASON = D.season;
+const TEAMS = D.teams;
+/* Counting games only: the NBA Cup final sits outside the record, so it must not
+   appear in a tower that IS the record -- and it must not stretch the slider to 83. */
+const counting = t => t.games.filter(g => g.counts !== false);
+const MAXG = Math.max(...TEAMS.map(t => counting(t).length), 1);
+
+/* The tallest column the page will ever have to draw, in cells. Sizing off an average
+   instead of this is what made a 64-win tower overflow its box and collide with the
+   labels. Measured over the WHOLE season so the scale does not jump while animating. */
+const MAXNEED = Math.max(10, ...TEAMS.map(t => {
+  let w = 0, l = 0;
+  counting(t).forEach(g => { if (g.res === 'W') w++; else if (g.res === 'L') l++; });
+  return Math.max(w, l, counting(t).length - w - l);
+}));
+
+/* Several primaries are near-black (Brooklyn and San Antonio are #000000 exactly), which
+   is invisible on this background. Prefer the team's SECONDARY when the primary is too
+   dark and the secondary is clearly brighter -- that is usually the colour the team is
+   actually recognised by anyway (Pacers gold, Suns orange, Spurs silver). Only if both
+   are dark do we artificially lift. */
+function lum(hex){
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+}
+function lift(hex){
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+  const n = parseInt(m[1], 16);
+  let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  const L = Math.max(lum(hex), 0.02), k = 0.30 / L;
+  r = Math.min(255, Math.round(r * k + 62));
+  g = Math.min(255, Math.round(g * k + 62));
+  b = Math.min(255, Math.round(b * k + 62));
+  return `rgb(${r},${g},${b})`;
+}
+function winColor(t){
+  const p = lum(t.primary), sec = lum(t.secondary);
+  if (p === null) return 'var(--win)';
+  if (p >= 0.22) return t.primary;
+  if (sec !== null && sec > p + 0.12) return t.secondary;
+  return lift(t.primary);
+}
+
+const crest = ab => `img/crest/${ab}.svg`;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sgn = n => (n > 0 ? '+' : '') + n;
+
+const PREF = {
+  get(k, d){ try { return localStorage.getItem('nbatow.' + k) ?? d; } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem('nbatow.' + k, v); } catch(e){} }
+};
+
+let group = PREF.get('group', 'conf');
+let sort  = PREF.get('sort', 'wins');
+let G     = MAXG;
+let playing = null;
+
+function recordAt(t, n){
+  const gs = counting(t).slice(0, n);
+  let w = 0, l = 0, todo = 0;
+  // `todo` is games inside the window that have NOT been played -- those are what hang
+  // from the ceiling. Counting games BEYOND the window instead left an unplayed season
+  // drawing nothing at all, because slicing 80 of 80 leaves no remainder.
+  gs.forEach(g => { if (g.res === 'W') w++; else if (g.res === 'L') l++; else todo++; });
+  return {w, l, todo, played: w + l};
+}
+
+function groupsOf(){
+  if (group === 'league') return [['The league', TEAMS]];
+  if (group === 'conf')
+    return [['Eastern Conference', TEAMS.filter(t => t.conf === 'East')],
+            ['Western Conference', TEAMS.filter(t => t.conf === 'West')]];
+  const divs = [];
+  ['Atlantic','Central','Southeast','Northwest','Pacific','Southwest'].forEach(d => {
+    const rows = TEAMS.filter(t => t.div === d);
+    if (rows.length) divs.push([d, rows]);
+  });
+  return divs;
+}
+
+function draw(){
+  const wrap = document.getElementById('wrap');
+  const anyPlayed = TEAMS.some(t => counting(t).some(g => g.res));
+
+  wrap.innerHTML = groupsOf().map(([name, rows]) => {
+    const withRec = rows.map(t => ({t, r: recordAt(t, G)}));
+    withRec.sort((a, b) =>
+      sort === 'wins' ? (b.r.w - a.r.w) || (a.r.l - b.r.l) || a.t.nick.localeCompare(b.t.nick)
+                      : a.t.nick.localeCompare(b.t.nick));
+
+    const towers = withRec.map(({t, r}) => {
+      const champ = t.po && t.po.outcome === 'CHAMPIONS';
+      // One box per game. Wins build upward from the baseline, losses hang below it,
+      // games not yet played hang from the ceiling -- so a season is a shape, and the
+      // silhouette IS the record.
+      const cell = 'height:var(--cell)';
+      const ups = Array.from({length: r.w}, () =>
+        `<i class="cellbox" style="${cell};background:${winColor(t)}"></i>`).join('');
+      const dns = Array.from({length: r.l}, () =>
+        `<i class="cellbox" style="${cell};background:var(--loss);opacity:.62"></i>`).join('');
+      const fut = Array.from({length: r.todo}, () =>
+        `<i class="cellbox" style="${cell};background:rgba(150,166,205,.45)"></i>`).join('');
+      return `<div class="tw ${champ ? 'champ' : ''}" data-ab="${t.abbr}">
+        <div class="stack">
+          <div class="fut">${fut}</div>
+          <div class="up">${ups}</div>
+          <div class="mid"></div>
+          <div class="dn">${dns}</div>
+        </div>
+        <div class="tlab">
+          <img src="${crest(t.abbr)}" alt="" loading="lazy">
+          <span class="ab">${esc(t.abbr)}${champ ? ' ★' : ''}</span>
+          <span class="rc">${anyPlayed ? `${r.w}-${r.l}` : `${counting(t).length} gms`}</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="group"><div class="ghead">${esc(name)}</div>
+      <div class="rowt">${towers}</div></div>`;
+  }).join('') || '<div class="empty">No teams.</div>';
+
+  if (!anyPlayed){
+    wrap.insertAdjacentHTML('afterbegin',
+      `<div class="empty">The ${esc(SEASON)} season has not started yet — every game hangs
+       from the ceiling, waiting, and the towers fill in as it is played.
+       <br>${MAXG} games per team are published so far; the NBA sets each team's last two
+       only once the Cup group stage resolves in December.</div>`);
+  }
+  sizeCells();
+  document.getElementById('gno').innerHTML = anyPlayed
+    ? `game <b>${G}</b> of ${MAXG}` : `<b>${MAXG}</b> games scheduled`;
+}
+
+/* Every box is the same height across the whole page, and the tallest column that can
+   occur (MAXNEED cells above or below the line) must fit inside half a stack -- or the
+   towers overflow and, worse, lie about scale. */
+function sizeCells(){
+  const wrap = document.getElementById('wrap');
+  const groups = groupsOf().length;
+  const notice = wrap.querySelector('.empty');
+  const noticeH = notice ? notice.getBoundingClientRect().height : 0;
+  // Measured, not guessed: heading 18.5 + label block 49.6 + gaps ~16 + group margin 18.
+  // Guessing 88 here left the second conference's labels clipped below the fold.
+  const OVERHEAD = 108;
+  const PAD = 24;                            // #wrap's own top+bottom padding
+  const th = Math.max(96,
+    (wrap.clientHeight - groups * OVERHEAD - PAD - noticeH) / groups);
+  const cell = Math.max(1.05, Math.min(7, (th / 2 - 3) / MAXNEED));
+  document.documentElement.style.setProperty('--cell', cell.toFixed(2) + 'px');
+  document.documentElement.style.setProperty('--th', th.toFixed(0) + 'px');
+}
+
+function setG(n){
+  G = Math.max(1, Math.min(MAXG, n));
+  document.getElementById('slider').value = G;
+  draw();
+}
+document.getElementById('slider').max = MAXG;
+document.getElementById('slider').addEventListener('input', e => setG(+e.target.value));
+
+function togglePlay(){
+  const b = document.getElementById('playb');
+  if (playing){ clearInterval(playing); playing = null;
+    b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>'; return; }
+  if (G >= MAXG) setG(1);
+  playing = setInterval(() => { if (G >= MAXG) return togglePlay(); setG(G + 1); }, 140);
+  b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7 5h3v14H7zM14 5h3v14h-3z"/></svg>';
+}
+
+/* segmented controls */
+function seg(host, items, current, onPick){
+  document.getElementById(host).innerHTML = items.map(([v, l]) =>
+    `<button class="pill ${v === current ? 'on' : ''}" data-v="${v}">${l}</button>`).join('');
+  document.getElementById(host).onclick = e => {
+    const b = e.target.closest('[data-v]'); if (!b) return; onPick(b.dataset.v);
+  };
+}
+function drawGroups(){
+  seg('groups', [['league','League'],['conf','Conference'],['div','Division']], group,
+    v => { group = v; PREF.set('group', v); drawGroups(); draw(); });
+}
+function drawSorts(){
+  seg('sorts', [['wins','Record'],['name','A–Z']], sort,
+    v => { sort = v; PREF.set('sort', v); drawSorts(); draw(); });
+}
+drawGroups(); drawSorts();
+
+document.getElementById('filmlink').href = `index-${SEASON}.html`;
+document.getElementById('seasons').innerHTML = (D.seasons || [SEASON]).map(s =>
+  s === SEASON ? `<span class="pill on">${s}</span>`
+               : `<a class="pill" href="towers-${s}.html">${s}</a>`).join('');
+
+/* hover tooltip on a tower */
+const tip = document.getElementById('tip');
+document.getElementById('wrap').addEventListener('mousemove', e => {
+  const tw = e.target.closest('.tw');
+  if (!tw){ tip.classList.remove('on'); return; }
+  const t = TEAMS.find(x => x.abbr === tw.dataset.ab);
+  const r = recordAt(t, G);
+  const last = counting(t).slice(0, G).filter(g => g.res).pop();
+  tip.innerHTML = `<div class="t">${esc(t.city)}</div><b>${esc(t.nick)}</b> ${r.w}-${r.l}
+    <div class="t" style="margin-top:3px">margin ${sgn(t.diff)} ·
+      ${t.seed ? `${esc(t.conf)} ${t.seed} seed` : 'no seed'}</div>
+    ${last ? `<div class="t">latest: ${last.res} ${last.us}-${last.them} v ${esc(last.opp)}</div>` : ''}
+    ${t.po ? `<div class="t" style="color:var(--gold)">${esc(t.po.outcome)}</div>` : ''}`;
+  tip.classList.add('on');
+  const pad = 14;
+  tip.style.left = Math.min(e.clientX + pad, innerWidth - tip.offsetWidth - 8) + 'px';
+  tip.style.top  = Math.min(e.clientY + pad, innerHeight - tip.offsetHeight - 8) + 'px';
+});
+document.getElementById('wrap').addEventListener('mouseleave', () => tip.classList.remove('on'));
+
+addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') { e.preventDefault(); setG(G + 1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); setG(G - 1); }
+  else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+  else if (e.key === 'Home') setG(1);
+  else if (e.key === 'End') setG(MAXG);
+});
+addEventListener('resize', () => { sizeCells(); });
+
+setG(MAXG);
+</script>
+</body>
+</html>

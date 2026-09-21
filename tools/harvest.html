@@ -1,0 +1,66 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>NBA harvest</title>
+<style>
+  body{background:#070910;color:#e8ecf5;font:14px/1.5 Helvetica,Arial,sans-serif;padding:24px;margin:0}
+  h1{font-weight:300;font-size:22px;margin:0 0 4px}
+  .sub{color:#8b96ad;margin-bottom:18px}
+  #log{font-family:ui-monospace,Menlo,monospace;font-size:12px;white-space:pre;
+       background:rgba(255,255,255,.04);border:1px solid rgba(150,166,205,.14);
+       border-radius:12px;padding:14px;max-height:62vh;overflow:auto}
+  .ok{color:#6fd48b}.bad{color:#e8664f}.na{color:#8b96ad}
+  b{color:#e05c2b;font-weight:700}
+</style>
+<h1>NBA harvest</h1>
+<div class="sub">Browser-proxied pull from stats.nba.com &rarr; <span id="dest"></span></div>
+<div id="log">idle</div>
+<script>
+const L = document.getElementById('log');
+document.getElementById('dest').textContent = 'scratch/raw/ via ' + location.origin;
+const line = (cls, t) => { L.innerHTML += `\n<span class="${cls}">${t}</span>`; L.scrollTop = 1e9; };
+
+// stats.nba.com wants these; from a localhost origin they are all simple headers
+// except the x-nba ones, which trigger a preflight -- so we probe with and without.
+const FULL = {'x-nba-stats-origin':'stats','x-nba-stats-token':'true'};
+
+async function grab(url, headers){
+  const r = await fetch(url, {headers, referrerPolicy:'no-referrer-when-downgrade'});
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  const t = await r.text();
+  JSON.parse(t);                       // fail here, not on disk
+  return t;
+}
+
+async function run(){
+  L.textContent = '';
+  const jobs = await (await fetch('/jobs')).json();
+  line('na', `${jobs.length} pending job(s)`);
+  if(!jobs.length){ line('ok','nothing to do'); return; }
+
+  // Decide once whether this origin may send the x-nba headers.
+  let headers = FULL;
+  try { await grab(jobs[0].url, FULL); line('na','preflight with x-nba headers: OK'); }
+  catch(e){
+    line('na', 'x-nba headers rejected (' + e.message + '), retrying bare');
+    try { await grab(jobs[0].url, {}); headers = {}; line('na','bare request: OK'); }
+    catch(e2){ line('bad','stats.nba.com refuses this origin: ' + e2.message); return; }
+  }
+
+  let ok = 0, bad = 0;
+  for(const j of jobs){
+    let body, good = true;
+    try { body = await grab(j.url, headers); }
+    catch(e){ body = JSON.stringify({__error__:String(e)}); good = false; }
+    await fetch('/save/' + encodeURIComponent(j.name),
+                {method:'POST', headers:{'Content-Type':'text/plain'}, body});
+    good ? ok++ : bad++;
+    line(good ? 'ok' : 'bad',
+         `${good ? 'ok  ' : 'FAIL'} ${j.name.padEnd(26)} ${(body.length/1024).toFixed(0)}KB`);
+    await new Promise(r => setTimeout(r, 350));
+  }
+  line('na', `\ndone: ${ok} saved, ${bad} failed`);
+  window.__done = {ok, bad};
+}
+window.__run = run;
+run().catch(e => line('bad', 'fatal: ' + e));
+</script>

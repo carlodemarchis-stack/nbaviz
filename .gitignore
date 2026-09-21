@@ -1,0 +1,11 @@
+# Cached raw API payloads and the shot sink — regenerable, ~90 MB
+scratch/
+
+# Source headshots at full size; img/headw/ holds the webp the site actually loads
+img/head/
+
+node_modules/
+.DS_Store
+
+# local dev-server config (machine-specific absolute paths)
+.claude/
