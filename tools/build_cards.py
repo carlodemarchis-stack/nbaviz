@@ -223,7 +223,7 @@ def main(label):
                 a[4] += mins
                 a[5] += tpm
                 plog[pid].append((date_of.get(gid, ""), pts, reb, ast, tpm, mins,
-                                  ab, gidx.get((ab, gid), -1)))
+                                  ab, gidx.get((ab, gid), -1), ftm))
 
     # --- teams
     out_teams = []
@@ -294,9 +294,12 @@ def main(label):
         # The hover on the game chart wants opponent, result and final score. Rather
         # than copy those onto every game (7,000 of them), each entry points at the row
         # in that team's own games list, which the payload already ships:
-        #   [index into p["teams"], index into that team's games, min, reb, ast]
+        #   [index into p["teams"], index into that team's games, min, reb, ast,
+        #    threes made, free throws made]
+        # The last two are what colours the game chart: threes*3 and free throws come
+        # straight out, and everything left over came from twos.
         tix = {t["t"]: i for i, t in enumerate(p["teams"])}
-        game_log = [[tix.get(x[6], 0), x[7], x[5], x[2], x[3]] for x in log]
+        game_log = [[tix.get(x[6], 0), x[7], x[5], x[2], x[3], x[4], x[8]] for x in log]
         out_players.append({
             "rank": p["rank"], "id": p["id"], "nbaId": p["nbaId"],
             "name": p["name"], "short": p["short"], "team": p["team"],

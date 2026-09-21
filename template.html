@@ -569,19 +569,37 @@ function logSvg(p){
   const avg = p.ppg;
   const y = v => H - Math.min(v, LOG_SCALE) / LOG_SCALE * H;
 
-  let below = 0, above = 0, best = 0, over = 0;
+  // Each column is stacked by WHERE the points came from, in the same red/blue/grey as
+  // the mix bar above it. That replaces colouring the whole bar green or red by whether
+  // it beat the average: the dashed average line still carries that and the caption
+  // still counts it, but a column can only say one thing at a time.
+  let above = 0, over = 0;
+  const MIX = [['from twos', 'var(--acc)'], ['from threes', '#5b8dd9'],
+               ['free throws', '#9aa6bd']];
   const bars = L.map((v, i) => {
-    const top = v >= p.highs.pts;
-    const up = v >= avg;
-    if (top) best++; else if (up) above++; else below++;
+    if (v >= avg) above++;
+    const g = (p.glog || [])[i] || [];
+    const three = (g[5] || 0) * 3, ft = g[6] || 0;
+    const parts = [Math.max(0, v - three - ft), three, ft];
+    const x = (i*bw).toFixed(2), w = Math.max(1.2, bw-.8).toFixed(2);
+    // A bar over the cap is drawn full height, so squash its segments to the cap rather
+    // than clip them -- the mix stays true even when the total cannot be shown.
+    const k = Math.min(v, LOG_SCALE) / (v || 1);
     if (v > LOG_SCALE) over++;
-    const yy = y(v);
-    const fill = top ? 'var(--gold)' : up ? 'var(--win)' : 'var(--loss)';
-    return `<rect x="${(i*bw).toFixed(2)}" y="${yy.toFixed(1)}"
-      width="${Math.max(1.2, bw-.8).toFixed(2)}" height="${(H-yy).toFixed(1)}" rx="1.5"
-      fill="${fill}" opacity="${top ? 1 : .82}"/>`
-      + (v > LOG_SCALE ? `<rect x="${(i*bw).toFixed(2)}" y="0"
-          width="${Math.max(1.2, bw-.8).toFixed(2)}" height="3" fill="var(--ink)"/>` : '');
+    let acc = 0, seg = '';
+    parts.forEach((val, n) => {
+      if (val <= 0) return;
+      const y0 = y(acc * k), y1 = y((acc + val) * k);
+      seg += `<rect x="${x}" y="${y1.toFixed(1)}" width="${w}"
+        height="${Math.max(0.6, y0 - y1).toFixed(1)}" fill="${MIX[n][1]}"/>`;
+      acc += val;
+    });
+    if (v > LOG_SCALE) seg += `<rect x="${x}" y="0" width="${w}" height="3"
+      fill="var(--ink)"/>`;
+    // The best night keeps its gold, as a cap rather than a whole bar it would recolour.
+    if (v >= p.highs.pts) seg += `<rect x="${x}" y="${(v > LOG_SCALE ? 3.4 : y(v)).toFixed(1)}"
+      width="${w}" height="3" fill="var(--gold)"/>`;
+    return seg;
   }).join('');
 
   let grid = '';
@@ -606,13 +624,11 @@ function logSvg(p){
       vector-effect="non-scaling-stroke"/>
   </svg></div>
   <div class="mixlab" style="margin-top:4px">
-    <span><i class="dot" style="background:var(--win)"></i>at or above ${avg}
-      <b>${above + best}</b></span>
-    <span><i class="dot" style="background:var(--loss)"></i>below <b>${below}</b></span>
+    ${MIX.map(m => `<span><i class="dot" style="background:${m[1]}"></i>${m[0]}</span>`).join('')}
     <span><i class="dot" style="background:var(--gold)"></i>best night
       <b>${p.highs.pts}</b>${over ? ' — above the scale' : ''}</span>
-    <span style="margin-left:auto;color:var(--dim)">game 1 → ${L.length} ·
-      same 0–${LOG_SCALE} scale on every card</span>
+    <span style="margin-left:auto;color:var(--dim)"><b>${above}</b> of ${L.length} at or
+      above ${avg} · same 0–${LOG_SCALE} scale on every card</span>
   </div>`;
 }
 
@@ -947,6 +963,9 @@ function nightTip(o){
     <div class="tdim">${WHEN(o.date)}</div>` + (o.fga == null ? '' :
     `<div class="trow">${o.fgm}-${o.fga} FG · ${o.tpm}-${o.tpa} 3PT ·
       ${o.ftm}-${o.fta} FT</div>`) +
+    (o.mix ? `<div class="trow">${o.mix.map((v, n) =>
+      `<i class="dot" style="background:${['var(--acc)','#5b8dd9','#9aa6bd'][n]}"></i>${v}`
+      ).join(' ')} <span class="tdim">from twos / threes / the line</span></div>` : '') +
     `<div class="tdim">${o.reb} reb · ${o.ast} ast · ${o.min} min</div>`;
 }
 
@@ -1122,7 +1141,7 @@ function logHover(e, box){
 
   // The log carries points only; the rest of the night is a pointer into the team's
   // own games list, which the payload already ships for the team cards.
-  const [ti, gi, min, reb, ast] = (p.glog || [])[i] || [];
+  const [ti, gi, min, reb, ast, tpm, ftm] = (p.glog || [])[i] || [];
   const ab = ((p.teams || [])[ti] || {}).t || p.team;
   const g = ((TEAMS[ab] || {}).games || [])[gi];
   if (!g) return hideTip();
@@ -1130,7 +1149,9 @@ function logHover(e, box){
       text-transform:uppercase">Game ${i + 1} of ${p.log.length}</div>` +
     nightTip({pts: p.log[i], name: p.name, team: ab, opp: g.opp,
               h: g.ha === 'H', w: g.res === 'W', us: g.us, them: g.them,
-              date: g.date, min, reb, ast}), e.clientX, e.clientY);
+              date: g.date, min, reb, ast,
+              mix: [Math.max(0, p.log[i] - tpm * 3 - ftm), tpm * 3, ftm]}),
+    e.clientX, e.clientY);
 }
 
 film.addEventListener('mousemove', onHover);

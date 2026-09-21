@@ -107,7 +107,9 @@ and that all 6,908 game-log pointers resolve to a game played on the right date.
 - **A player's game log carries points only.** Opponent, result and final score come from
   a `[team, game]` pointer into the team's own games list, which the payload already
   ships — copying them onto all 6,908 player-games cost 100 KB for nothing. `build_cards`
-  checks every pointer lands on a game played on that log entry's date.
+  checks every pointer lands on a game played on that log entry's date. The same entry
+  carries that night's threes and free throws, which is what stacks the game chart into
+  2PT / 3PT / FT; everything left over came from twos.
 - **The biggest-nights columns drop their names below 1180px.** 100 columns need about
   1200px before a 9px vertical name fits in one; narrower, it renders as glyph slices.
 - **On mobile the cards are a flex column, not a one-column grid.** The grid box has a
