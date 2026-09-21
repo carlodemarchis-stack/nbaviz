@@ -111,13 +111,15 @@ and that all 6,908 game-log pointers resolve to a game played on the right date.
   carries that night's threes and free throws, which is what stacks the game chart into
   2PT / 3PT / FT; everything left over came from twos.
 - **The portrait watermark is sized by the photo box**, via a size container query on
-  `.shot` (`min(74cqh, 42cqw)`) — bounded by height *and* width, because the number is one
-  or two digits. The `clamp()` above it is the fallback.
+  `.shot` (`min(82cqh, var(--rw, 46cqw))`) — bounded by height *and* width. Rank 100 is the
+  only three-digit number in the deck and gets a narrower `--rw` inline. The `clamp()`
+  above it is the fallback.
 - **The player's number, team and bio are ONE line**, truncated rather than wrapped. A
   traded player shows his split (`LAC 44 → CLE 26`) instead of the current team's full
   name, which is what used to push five of the hundred past the end of the line.
-- **The portrait watermark is the jersey number, not the rank.** The rank is the film's
-  ordering, so it sits opposite as a small chip rather than as the giant number.
+- **The portrait watermark is the rank, captioned "by points"** — a giant bare number
+  reads as a jersey otherwise. The jersey is the small chip opposite; it is also spelled
+  out on the meta line under the player's name.
 - **The points chart has a Split / Avg switch** beside its title: Split stacks each column
   by 2PT / 3PT / FT, Avg colours the whole bar green at or above the average, red below,
   gold for the best night. Rebounds and assists have no split, so they are always drawn
