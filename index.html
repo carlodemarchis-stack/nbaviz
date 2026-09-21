@@ -97,13 +97,15 @@ a{color:inherit}
 
 .tright{display:flex;flex-direction:column;gap:12px;min-height:0}
 .arcwrap{flex:0 0 auto}
-.arcbox{position:relative;width:100%}
+/* The y labels live in a gutter to the LEFT of the plot, not floating over it. They
+   used to sit at left:0 on top of the chart with a fade behind them, which overlapped
+   the first bars and was hard to read. */
+.arcbox{position:relative;width:100%;padding-left:34px}
 .arc{width:100%;height:clamp(118px,16vh,164px);display:block;overflow:visible}
-.arclbl{position:absolute;left:0;transform:translateY(-50%);font-size:9.5px;
-  color:rgba(150,166,205,.5);font-variant-numeric:tabular-nums;pointer-events:none;
-  background:linear-gradient(90deg,rgba(9,11,18,.85),rgba(9,11,18,0));padding:0 7px 0 2px;
-  line-height:1}
-.arclbl.zero{color:rgba(232,236,245,.75);font-size:10px}
+.arclbl{position:absolute;left:0;width:27px;text-align:right;transform:translateY(-50%);
+  font-size:10px;color:rgba(255,255,255,.72);font-variant-numeric:tabular-nums;
+  pointer-events:none;line-height:1;white-space:nowrap}
+.arclbl.zero{color:#fff;font-weight:700}
 .arclab{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);
   margin-top:4px;font-variant-numeric:tabular-nums}
 
