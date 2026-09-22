@@ -128,10 +128,20 @@ def one(gid):
     return e
 
 
-def do(label):
-    sched = json.load(open(os.path.join(DATA, f"schedule-{label}.json")))
-    gids = sorted({g["id"] for gs in sched.values() for g in gs if g["res"]})
-    print(f"  {len(gids)} completed games to pull")
+def do(label, postseason=False):
+    """postseason=True pulls the playoff games instead, from playoffs-*.json.
+
+    Same endpoint, same extraction -- ESPN's summary is identical for a playoff game,
+    it is only the id list that differs. Written to its own file so a playoff line can
+    never be mistaken for a regular-season one downstream.
+    """
+    if postseason:
+        po = json.load(open(os.path.join(DATA, f"playoffs-{label}.json")))
+        gids = sorted({g["id"] for gs in po.values() for g in gs if g.get("res")})
+    else:
+        sched = json.load(open(os.path.join(DATA, f"schedule-{label}.json")))
+        gids = sorted({g["id"] for gs in sched.values() for g in gs if g["res"]})
+    print(f"  {len(gids)} completed {'playoff ' if postseason else ''}games to pull")
 
     got, fail, t0 = {}, [], time.time()
     with ThreadPoolExecutor(max_workers=8) as ex:
@@ -150,13 +160,14 @@ def do(label):
         print(f"  WARNING {len(fail)} games failed: {fail[:3]}")
 
     out = {g: got[g]["teams"] for g in sorted(got)}
-    p = os.path.join(DATA, f"boxlines-{label}.json.gz")
+    p = os.path.join(DATA, f"boxlines{'-po' if postseason else ''}-{label}.json.gz")
     with gzip.open(p, "wt") as f:
         json.dump(out, f, separators=(",", ":"))
     rows = sum(len(r) for t in out.values() for r in t.values())
-    print(f"  wrote data/boxlines-{label}.json.gz  "
+    print(f"  wrote {os.path.relpath(p, os.path.join(HERE, '..'))}  "
           f"{os.path.getsize(p) / 1024 / 1024:.1f} MB  ({rows} player-games)")
 
 
 if __name__ == "__main__":
-    do(sys.argv[1] if len(sys.argv) > 1 else "2025-26")
+    args = [a for a in sys.argv[1:] if a != "--playoffs"]
+    do(args[0] if args else "2025-26", postseason="--playoffs" in sys.argv)

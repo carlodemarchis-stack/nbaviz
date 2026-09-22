@@ -221,6 +221,7 @@ def main(label):
     po = load(f"playoffs-{label}.json") or {}
     deck = load(f"deck-players-{label}.json") or []
     box = load(f"boxlines-{label}.json.gz", gz=True) or {}
+    pobox = load(f"boxlines-po-{label}.json.gz", gz=True) or {}
     seed = seeds(label)
     shot = shots(label)
 
@@ -261,6 +262,31 @@ def main(label):
                 a[5] += tpm
                 plog[pid].append((date_of.get(gid, ""), pts, reb, ast, tpm, mins,
                                   ab, gidx.get((ab, gid), -1), ftm))
+
+    # --- playoff per-game lines, tagged with the round they belong to.
+    # Kept apart from plog: these games are not in a team's `games` list, so they carry
+    # their own opponent/score rather than pointing at an index like the season log does.
+    po_meta = {}                                   # (team, gid) -> round/opponent/score
+    for ab, gs in po.items():
+        for g in gs:
+            rn = round_name(g.get("note"))
+            if rn:
+                po_meta[(ab, g["id"])] = (rn, g["opp"], g.get("us"), g.get("them"),
+                                          g.get("res"), g.get("date", ""))
+    pologs = defaultdict(list)                     # pid -> [(date, round, ...)]
+    for gid, blocks in pobox.items():
+        for ab, rows in blocks.items():
+            meta = po_meta.get((ab, gid))
+            if not meta:
+                continue
+            rn, opp, us, them, res, date = meta
+            ri = ROUND_ORDER.index(rn) if rn in ROUND_ORDER else 9
+            for r in rows:
+                pid, mins, pts, fgm, fga, tpm, tpa, ftm, fta, reb, ast = r[:11]
+                if not mins:                       # did not play: no bar
+                    continue
+                pologs[pid].append((date, ri, pts, tpm, ftm, mins, reb, ast,
+                                    opp, us, them, res))
 
     # --- teams
     out_teams = []
@@ -369,6 +395,12 @@ def main(label):
             # No playoff line, but his team played: say so, otherwise the missing row
             # reads the same as "team missed the playoffs" and the reader can't tell
             # a DNP from an early exit. Value is how far the team actually got.
+            # Playoff games on the same timeline as the season, after a divider.
+            # [pts, threes made, free throws made, minutes, rebounds, assists,
+            #  round index, W/L, opponent, us, them] -- round index keys the labels.
+            "polog": ([[g[2], g[3], g[4], g[5], g[6], g[7], g[1], g[11],
+                        g[8], g[9], g[10]]
+                       for g in sorted(pologs[p["id"]])] or None),
             "poMiss": (team_run_label(po.get(p.get("team"))) 
                        if not p.get("po") and po.get(p.get("team")) else None),
         })
