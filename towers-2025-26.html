@@ -4,7 +4,37 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>NBA Season Towers — 2025-26</title>
-<meta name="description" content="Every NBA team's 2025-26 season as a shape: wins stack up, losses hang down, games still to play hang from the ceiling.">
+<meta name="description" content="Every NBA team's 2025-26 season as a shape: wins stack up, losses hang down, games still to play hang from the ceiling. Drag the slider and watch the table re-sort game by game. Oklahoma City Thunder won 64, and Knicks took the title from the 3 seed.">
+<link rel="canonical" href="https://nba.aguywithascarf.com/towers-2025-26.html">
+<meta name="theme-color" content="#070910">
+
+<!-- Link previews on LinkedIn / X / WhatsApp / Slack. Every URL absolute, and each
+     generated page carries its OWN url, title and description -- render.py fills these
+     per file, so the towers page and the unplayed 2026-27 season do not claim to be the
+     2025-26 film. Bump the ?v= on og.png to bust the caches. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="A Guy With A Scarf">
+<meta property="og:title" content="NBA Season Towers — 2025-26">
+<meta property="og:description" content="Every NBA team's 2025-26 season as a shape: wins stack up, losses hang down, games still to play hang from the ceiling. Drag the slider and watch the table re-sort game by game. Oklahoma City Thunder won 64, and Knicks took the title from the 3 seed.">
+<meta property="og:url" content="https://nba.aguywithascarf.com/towers-2025-26.html">
+<meta property="og:image" content="https://nba.aguywithascarf.com/img/og.png?v=1">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Thirty NBA teams drawn as towers on a shared baseline, 2025-26">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="NBA Season Towers — 2025-26">
+<meta name="twitter:description" content="Every NBA team's 2025-26 season as a shape: wins stack up, losses hang down, games still to play hang from the ceiling. Drag the slider and watch the table re-sort game by game. Oklahoma City Thunder won 64, and Knicks took the title from the 3 seed.">
+<meta name="twitter:image" content="https://nba.aguywithascarf.com/img/og.png?v=1">
+
+<!-- Read by the AGWAS capture extension at the moment you press the shortcut, and
+     embedded into the PNG as the CTA / Tags / Mentions chunks for the Instagram caption
+     and story card. These are DEFAULTS: updateSocialMeta() rewrites them on every card
+     change, so a capture describes the card you are actually looking at. -->
+<meta name="agwas:title"    content="NBA Season Towers — 2025-26">
+<meta name="agwas:cta"      content="Full interactive NBA experience below">
+<meta name="agwas:mentions" content="nba">
+<meta name="agwas:tags"     content="nba dataviz basketball">
+<meta name="agwas:bg"       content="https://nba.aguywithascarf.com/img/og.png">
 <link rel="icon" href="favicon.svg">
 <style>
 :root{
@@ -374,6 +404,30 @@ function syncHash(){
   const want = `#${group}/${sort}/${G}`;
   if (location.hash !== want) history.replaceState(null, '', want);
   PREF.set('game', G);
+  updateSocialMeta();
+}
+
+/* The capture extension reads these when the shortcut is pressed, so they describe the
+   view on screen -- which grouping, and how far through the season the slider is.
+   syncHash() is the one place every change passes through. */
+function socMeta(name, content){
+  let m = document.head.querySelector('meta[name="' + name + '"]');
+  if (!m){ m = document.createElement('meta'); m.setAttribute('name', name); document.head.appendChild(m); }
+  m.setAttribute('content', content);
+}
+function updateSocialMeta(){
+  try {
+    // The keys are the app's own: league / conf / div. Spelling them out here as
+    // "conference" and "division" silently fell through to the league wording.
+    const scope = {league:'the whole league', conf:'by conference',
+                   div:'by division'}[group] || 'the whole league';
+    const done = G >= MAXG;
+    socMeta('agwas:title', `NBA Season Towers, ${SEASON}`);
+    socMeta('agwas:cta', `Every NBA team's ${SEASON} as a shape, ${scope}`
+      + (done ? '' : ` — after game ${G}`) + ' — full interactive experience below');
+    socMeta('agwas:tags', `nba dataviz basketball seasontowers ${group}`);
+    socMeta('agwas:mentions', 'nba');
+  } catch(e) {}
 }
 function readHash(){
   const m = /^#([a-z]+)\/([a-z]+)\/(\d+)$/.exec(location.hash || '');

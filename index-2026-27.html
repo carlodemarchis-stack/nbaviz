@@ -4,7 +4,37 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>NBA Season Film — 2026-27</title>
-<meta name="description" content="The 2026-27 NBA season as a film: one card per franchise, one per leading scorer, read end to end.">
+<meta name="description" content="The 2026-27 NBA season as a film, before a ball is thrown: a card per franchise carrying the published schedule. The player cards and the charts fill in as the season is played.">
+<link rel="canonical" href="https://nba.aguywithascarf.com/index-2026-27.html">
+<meta name="theme-color" content="#070910">
+
+<!-- Link previews on LinkedIn / X / WhatsApp / Slack. Every URL absolute, and each
+     generated page carries its OWN url, title and description -- render.py fills these
+     per file, so the towers page and the unplayed 2026-27 season do not claim to be the
+     2025-26 film. Bump the ?v= on og.png to bust the caches. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="A Guy With A Scarf">
+<meta property="og:title" content="NBA Season Film — 2026-27">
+<meta property="og:description" content="The 2026-27 NBA season as a film, before a ball is thrown: a card per franchise carrying the published schedule. The player cards and the charts fill in as the season is played.">
+<meta property="og:url" content="https://nba.aguywithascarf.com/index-2026-27.html">
+<meta property="og:image" content="https://nba.aguywithascarf.com/img/og.png?v=1">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A team card from the 2026-27 NBA season film">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="NBA Season Film — 2026-27">
+<meta name="twitter:description" content="The 2026-27 NBA season as a film, before a ball is thrown: a card per franchise carrying the published schedule. The player cards and the charts fill in as the season is played.">
+<meta name="twitter:image" content="https://nba.aguywithascarf.com/img/og.png?v=1">
+
+<!-- Read by the AGWAS capture extension at the moment you press the shortcut, and
+     embedded into the PNG as the CTA / Tags / Mentions chunks for the Instagram caption
+     and story card. These are DEFAULTS: updateSocialMeta() rewrites them on every card
+     change, so a capture describes the card you are actually looking at. -->
+<meta name="agwas:title"    content="NBA Season Film — 2026-27">
+<meta name="agwas:cta"      content="Full interactive NBA experience below">
+<meta name="agwas:mentions" content="nba">
+<meta name="agwas:tags"     content="nba dataviz basketball">
+<meta name="agwas:bg"       content="https://nba.aguywithascarf.com/img/og.png">
 <link rel="icon" href="favicon.svg">
 <style>
 :root{
@@ -1063,7 +1093,7 @@ function playerCard(p){
         </div>
         <div class="shot">
           <div class="rankno"${p.rank >= 100 ? ' style="--rw:16cqw"' : ''}>
-            <b>${p.rank}</b><span>by points</span></div>
+            <b>${p.rank}</b><span>${p.pts.toLocaleString('en-US')} points</span></div>
           <div class="jerseybox" style="color:${winColor(t)}">
             ${p.jersey ? `<b class="jerseyno">${esc(p.jersey)}</b>` : ''}
             <span class="jteam">${esc(t.name || p.team)}</span></div>
@@ -1344,6 +1374,73 @@ document.getElementById('applist').innerHTML = APPS.map(a =>
   `<a class="approw" href="${a[3]}" target="_blank" rel="noopener">
     <i style="background:${a[2]}"></i><span>${a[0]}<em>${a[1]}</em></span><span>↗</span></a>`).join('');
 
+/* ---------- social metadata, per card ----------
+   The capture extension reads these at the moment the shortcut is pressed, so they have
+   to describe the card ON SCREEN, not the page. paint() is the one place every
+   navigation passes through, which is where this is called from -- same choke-point
+   pattern as f1-cards (lcHash) and the season towers (syncUrl). */
+const SITE = 'https://nba.aguywithascarf.com';
+const SOC_OG = SITE + '/img/og.png';
+/* Instagram handles. A mention in the caption genuinely notifies the account, so a wrong
+   handle tags a stranger -- these are worth a glance before the first post. */
+const TEAM_IG = {
+  ATL:'atlhawks', BOS:'celtics', BKN:'brooklynnets', CHA:'hornets', CHI:'chicagobulls',
+  CLE:'cavs', DAL:'dallasmavs', DEN:'nuggets', DET:'detroitpistons', GS:'warriors',
+  HOU:'houstonrockets', IND:'pacers', LAC:'laclippers', LAL:'lakers', MEM:'memgrizz',
+  MIA:'miamiheat', MIL:'bucks', MIN:'timberwolves', NO:'pelicansnba', NY:'nyknicks',
+  OKC:'okcthunder', ORL:'orlandomagic', PHI:'sixers', PHX:'suns', POR:'trailblazers',
+  SAC:'sacramentokings', SA:'spurs', TOR:'raptors', UTAH:'utahjazz', WSH:'washwizards',
+};
+/* Fold the accents FIRST. Stripping non-ascii straight away turned "Doncic" into
+   "lukadoni" -- it ate the c-with-caron and the i-with-acute rather than folding them. */
+const socTag = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase().replace(/[^a-z0-9]+/g, '').replace(/^the/, '');
+
+function socMeta(name, content){
+  let m = document.head.querySelector('meta[name="' + name + '"]');
+  if (!m){ m = document.createElement('meta'); m.setAttribute('name', name); document.head.appendChild(m); }
+  m.setAttribute('content', content);
+}
+
+function socSubject(){
+  const c = CARDS[cur] || {};
+  if (c.kind === 'team'){
+    const t = c.t;
+    return {name: `${t.name}, ${SEASON}`,
+            line: `${t.name} went ${t.w}-${t.l} in ${SEASON}`,
+            tags: ['nba', 'dataviz', socTag(t.nick)],
+            ig: ['nba', TEAM_IG[t.abbr]], bg: SOC_OG};
+  }
+  if (c.kind === 'player'){
+    const p = c.p, t = TEAMS[p.team] || {};
+    return {name: `${p.name}, ${SEASON}`,
+            line: `${p.name} scored ${p.pts} points in ${SEASON}, no. ${p.rank} in the league`,
+            tags: ['nba', 'dataviz', socTag(p.name), socTag(t.nick)],
+            // His own cutout: transparent, so it crops and blurs well behind the story
+            // card. These are the files the cards already load, so they cannot 404.
+            ig: ['nba', TEAM_IG[p.team]], bg: `${SITE}/${head(p.id)}`};
+  }
+  if (c.kind === 'cover'){
+    return {name: `NBA ${SEASON}`, line: `The ${SEASON} NBA season, card by card`,
+            tags: ['nba', 'dataviz', 'basketball'], ig: ['nba'], bg: SOC_OG};
+  }
+  return {name: `${label(cur)}, ${SEASON}`,
+          line: `${label(cur)} — the ${SEASON} NBA season`,
+          tags: ['nba', 'dataviz', 'basketball', socTag(label(cur))],
+          ig: ['nba'], bg: SOC_OG};
+}
+
+function updateSocialMeta(){
+  try {
+    const s = socSubject();
+    socMeta('agwas:title', s.name);
+    socMeta('agwas:cta', s.line + ' — full interactive experience below');
+    socMeta('agwas:tags', [...new Set(s.tags.filter(Boolean))].join(' '));
+    socMeta('agwas:mentions', s.ig.filter(Boolean).join(','));
+    socMeta('agwas:bg', s.bg);
+  } catch(e) {}
+}
+
 /* ---------- navigation ---------- */
 const cards = [...film.children];
 let cur = 0, playing = null;
@@ -1482,6 +1579,7 @@ function paint(){
   if (location.hash !== want) history.replaceState(null, '', want);
   try { localStorage.setItem('nba.card', cur); } catch(e) {}
   paintLog(cur);
+  updateSocialMeta();
 }
 function go(i, smooth = true){
   cur = Math.max(0, Math.min(CARDS.length - 1, i));

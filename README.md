@@ -158,6 +158,24 @@ and that all 6,908 game-log pointers resolve to a game played on the right date.
 - `scrollTo({behavior:'auto'})` defers to CSS `scroll-behavior`, which is `smooth` here —
   use `'instant'` for real jumps.
 
+## Social metadata
+
+Two layers, for two different readers.
+
+**Open Graph / Twitter** — static per generated file, for link previews. `render.py`'s
+`social()` writes each page's own title, description, canonical and `og:url` from the
+payload, so the towers page does not claim to be the film and a season with nothing played
+does not advertise a champion. `index.html` is rewritten to the bare domain, or every share
+of the root would point crawlers at `index-2025-26.html` as a duplicate. Hero image is
+`img/og.png` (1200×630) — rebuild it with headless Chrome per [[social-share-og-setup]].
+
+**`agwas:*`** — read by the AGWAS capture extension at the moment the shortcut is pressed
+and embedded in the PNG as the `CTA` / `Tags` / `Mentions` chunks. They must describe the
+card ON SCREEN, so `updateSocialMeta()` is called from the one place every navigation
+passes through: `paint()` on the film, `syncHash()` on the towers. A player card carries
+his own name, points, team hashtag and headshot as the story background; a team card its
+record and handle; the towers their grouping and slider position.
+
 ## Design
 
 **Two palettes that must not collide.** The shot chart's cold→hot ramp is steel blue →
