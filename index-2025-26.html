@@ -204,8 +204,17 @@ a{color:inherit}
    team, and none of those take an alpha the same way. */
 .jerseybox{position:absolute;top:6px;right:15px;text-align:right;pointer-events:none}
 .jerseybox .jteam{pointer-events:auto}
+/* Outlined like a real jersey numeral: a soft fill with a brighter edge. Fill and edge
+   need separate alphas, so the tint goes in the colours rather than on the element --
+   an element opacity would dim both together. The plain rgba line is the fallback. */
 .jerseyno{display:block;font-weight:700;line-height:.82;opacity:.26;
   font-variant-numeric:tabular-nums;letter-spacing:-.03em;font-size:clamp(52px,7.4vw,104px)}
+@supports (color: color-mix(in srgb, red 50%, transparent)){
+  .jerseyno{opacity:1;
+    color:color-mix(in srgb, var(--tc) 22%, transparent);
+    -webkit-text-stroke:.022em color-mix(in srgb, var(--tc) 62%, transparent);
+    paint-order:stroke fill}
+}
 /* The team, in its own colour, under its own number. Smaller type needs more of the
    colour than the watermark does to stay legible. */
 /* A chip, not loose text. At .62 alpha of a dark team colour, over a photo, the name and
