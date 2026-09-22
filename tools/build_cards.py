@@ -94,6 +94,21 @@ def playoff_run(games):
             "w": sum(r["w"] for r in rounds), "l": sum(r["l"] for r in rounds)}
 
 
+def team_run_label(games):
+    """How far a team got, phrased for a player card: 'LAL reached the West Semifinals'."""
+    run = playoff_run(games)
+    if not run:
+        return None
+    last = run["rounds"][-1]
+    if run["outcome"] == "CHAMPIONS":
+        return "won the title"
+    # Every playoff team "reaches" the first round, so name the exit, not the arrival.
+    if last["w"] > last["l"]:
+        return "reached the " + last["round"]
+    return ("lost the NBA Finals" if last["round"] == "NBA Finals"
+            else "went out in the " + last["round"])
+
+
 def seeds(label):
     """Conference seed from ESPN's own standings, not recomputed from wins."""
     raw = os.path.join(HERE, "..", "scratch", "raw",
@@ -351,6 +366,11 @@ def main(label):
                     "rpg": r1(p["po"].get("avgRebounds", 0)),
                     "apg": r1(p["po"].get("avgAssists", 0))}
                    if p.get("po") else None),
+            # No playoff line, but his team played: say so, otherwise the missing row
+            # reads the same as "team missed the playoffs" and the reader can't tell
+            # a DNP from an early exit. Value is how far the team actually got.
+            "poMiss": (team_run_label(po.get(p.get("team"))) 
+                       if not p.get("po") and po.get(p.get("team")) else None),
         })
 
     champ = next((t["abbr"] for t in out_teams if t["po"] and t["po"]["outcome"] == "CHAMPIONS"), None)
