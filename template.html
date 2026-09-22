@@ -1272,7 +1272,9 @@ function playerCard(p){
             <div class="k">Free throws</div></div>
           <div><div class="v">${p.dd}</div><div class="k">Double-doubles</div></div>
           <div><div class="v">${p.td}</div><div class="k">Triple-doubles</div></div>
-          <div><div class="v">${p.highs.pts}</div><div class="k">Best night</div></div>
+          <div><div class="v">${p.highs.pts}</div>
+            <div class="k">Best game${p.highs.opp
+              ? ` ${p.highs.ha === 'H' ? 'vs' : '@'} ${esc(p.highs.opp)}` : ''}</div></div>
         </div></div>
         ${p.po ? `<div class="box"><div class="kv">
           <div><div class="v potitle">Playoffs</div></div>

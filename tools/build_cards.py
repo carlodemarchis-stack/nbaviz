@@ -94,6 +94,18 @@ def playoff_run(games):
             "w": sum(r["w"] for r in rounds), "l": sum(r["l"] for r in rounds)}
 
 
+def best_night(log, sched):
+    """Opponent and venue of the highest-scoring game in a player's log."""
+    if not log:
+        return {}
+    top = max(log, key=lambda x: x[1])
+    gs = sched.get(top[6]) or []
+    gm = gs[top[7]] if 0 <= top[7] < len(gs) else None
+    if not gm:
+        return {}
+    return {"opp": gm.get("opp"), "ha": gm.get("ha")}
+
+
 def team_run_label(games):
     """How far a team got, phrased for a player card: 'LAL reached the West Semifinals'."""
     run = playoff_run(games)
@@ -400,7 +412,10 @@ def main(label):
             "highs": {"pts": max(pts_log or [0]),
                       "reb": max((x[2] for x in log), default=0),
                       "ast": max((x[3] for x in log), default=0),
-                      "tpm": max((x[4] for x in log), default=0)},
+                      "tpm": max((x[4] for x in log), default=0),
+                      # Who the best night came against. Ties go to the earliest such
+                      # game -- log is already in date order, so max() keeps the first.
+                      **best_night(log, sched)},
             "shots": shot.get(p["id"]),
             "po": ({"gp": int(p["po"].get("gamesPlayed", 0)),
                     "ppg": r1(p["po"].get("avgPoints", 0)),
