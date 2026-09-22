@@ -212,6 +212,11 @@ a{color:inherit}
 .rankno{position:absolute;top:8px;left:13px;pointer-events:none}
 .rankno b{display:block;font-weight:700;line-height:.82;color:rgba(232,236,245,.13);
   font-variant-numeric:tabular-nums;letter-spacing:-.03em;font-size:clamp(26px,3.7vw,52px)}
+/* The total is the point of the rank, so it gets real size and real contrast; the word
+   stays a caption underneath it. */
+.rankno em{display:block;margin-top:7px;padding-left:2px;font-style:normal;font-weight:700;
+  line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+  color:rgba(232,236,245,.5);font-size:clamp(15px,2vw,28px)}
 .rankno span{display:block;margin-top:4px;padding-left:2px;font-size:9px;
   letter-spacing:.17em;text-transform:uppercase;color:rgba(150,166,205,.42)}
 /* Bounded by the box's height AND its width -- the jersey is one or two digits, the rank
@@ -220,6 +225,7 @@ a{color:inherit}
 @supports (container-type: size){
   .jerseyno{font-size:min(74cqh, 42cqw)}
   .rankno b{font-size:min(41cqh, var(--rw, 23cqw))}
+  .rankno em{font-size:min(9cqh, 6cqw)}
 }
 
 /* Points / Rebounds / Assists over the same game chart. */
@@ -424,19 +430,20 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
   .jerseyno{font-size:min(68cqh,42cqw)}
   .jteam{font-size:10px}
   .rankno b{font-size:min(41cqh, var(--rw, 23cqw))}
+  .rankno em{font-size:min(9cqh, 6cqw)}
 }
 </style>
 </head>
 <body>
 
 <div id="topbar">
-  <!-- One strip: the towers view of the season, then this film's four sections. The
-       film pill lives on the right, since on this page it is a marker rather than a
-       destination. -->
+  <!-- One strip: the towers view of the season, then this film's four sections. No
+       "Film" pill -- on this page it would mark where you already are, and on the towers
+       page the four section pills are themselves the way in. -->
   <div id="pills"></div>
   <div class="seg" id="seasons" style="flex:0 0 auto"></div>
   <div id="ctx"></div>
-  <div id="credit"><span class="pill on" style="margin-right:10px">Film</span>Produced with passion by <b>Carlo De Marchis</b> ·
+  <div id="credit">Produced with passion by <b>Carlo De Marchis</b> ·
     <a href="#" onclick="openMod('cmodal');return false">Credits</a></div>
 </div>
 
@@ -1095,7 +1102,7 @@ function playerCard(p){
         </div>
         <div class="shot">
           <div class="rankno"${p.rank >= 100 ? ' style="--rw:16cqw"' : ''}>
-            <b>${p.rank}</b><span>${p.pts.toLocaleString('en-US')} points</span></div>
+            <b>${p.rank}</b><em>${p.pts.toLocaleString('en-US')}</em><span>points</span></div>
           <div class="jerseybox" style="color:${winColor(t)}">
             ${p.jersey ? `<b class="jerseyno">${esc(p.jersey)}</b>` : ''}
             <span class="jteam">${esc(t.name || p.team)}</span></div>

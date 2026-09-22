@@ -105,8 +105,11 @@ and that all 6,908 game-log pointers resolve to a game played on the right date.
 One strip on both pages: **Season · Players · Player stats · Teams · Team stats**, where
 *Season* is the towers view. From the film it links out to the towers; from the towers the
 other four link into the film **by name** (`index-2025-26.html#player-stats`), so the
-towers page never has to know where a section's cards start. The film pill sits on the
-right, a marker on the film and a way back from the towers.
+towers page never has to know where a section's cards start. There is no "Film" pill —
+those four are themselves the way in, and on the film page it would only mark where you
+already are. The towers page has no static title either: the lit *Season* pill and the
+season switcher beside it say the same thing, and being unshrinkable it pushed the credit
+off the right edge once the strip grew.
 
 ## Layout rules that are load-bearing
 

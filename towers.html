@@ -153,16 +153,19 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
 <body>
 
 <div id="topbar">
-  <div id="ttl">NBA <b>2025-26</b> · Season Towers</div>
+  <!-- The old "NBA <season> · Season Towers" title lived here. The strip's lit Season
+       pill and the season switcher beside it now say exactly that, and being nowrap and
+       unshrinkable it was pushing the credit off the right edge once the strip grew. -->
   <!-- The same strip as the film, so the bar reads the same on both pages: this view
-       first, then the film's four sections, each linked by name. The season switcher
-       loses its "Season" label here -- that word now belongs to the pill. -->
+       first, then the film's four sections, each linked by name. Those four ARE the way
+       back into the film, which is why there is no separate "Film" pill. The season
+       switcher loses its "Season" label here -- that word now belongs to the pill. -->
   <div class="seg" id="strip"></div>
   <div class="seg" id="seasons"></div>
   <div class="grow"></div>
   <span class="lab">Group</span><div class="seg" id="groups"></div>
   <span class="lab">Order</span><div class="seg" id="sorts"></div>
-  <div id="credit"><span id="filmmark"></span>Produced with passion by <b>Carlo De Marchis</b> ·
+  <div id="credit">Produced with passion by <b>Carlo De Marchis</b> ·
     <a href="#" onclick="openMod('cmodal');return false">Credits</a></div>
 </div>
 
@@ -469,8 +472,7 @@ document.getElementById('strip').innerHTML =
   [['Players','players'], ['Player stats','player-stats'],
    ['Teams','teams'], ['Team stats','team-stats']].map(([n, slug]) =>
     `<a class="pill" href="index-${SEASON}.html#${slug}">${n}</a>`).join('');
-document.getElementById('filmmark').innerHTML =
-  `<a class="pill" href="index-${SEASON}.html" style="margin-right:10px">Film</a>`;
+
 document.getElementById('seasons').innerHTML = (D.seasons || [SEASON]).map(s =>
   s === SEASON ? `<span class="pill on">${s}</span>`
                : `<a class="pill" href="towers-${s}.html">${s}</a>`).join('');
