@@ -575,13 +575,14 @@ let METRIC = 'pts';
    colours the whole bar green at or above the average, red below, gold for the best
    night. Rebounds and assists have no split, so they are always drawn the 'avg' way. */
 let LOGMODE = 'split';
-/* season | po | both -- which part of the year the chart shows. 'both' by default:
-   the playoff run is the end of the same story, not a separate view. */
-let LOGPART = 'both';
+/* Whether the playoff run is appended to the season on the game chart. On by default:
+   it is the end of the same story. A single toggle -- there is no playoffs-only view,
+   because six bars alone in a 72-bar frame say less than six bars in their context. */
+let POON = true;
 try {
   const m = localStorage.getItem('nba.metric'); if (m) METRIC = m;
   const d = localStorage.getItem('nba.logmode'); if (d) LOGMODE = d;
-  const q = localStorage.getItem('nba.logpart'); if (q) LOGPART = q;
+  const q = localStorage.getItem('nba.poon'); if (q !== null) POON = q === '1';
 } catch(e) {}
 
 const crest = ab => `img/crest/${ab}.svg`;
@@ -834,8 +835,8 @@ const PO_ROUNDS = ['1st Round', 'Semifinals', 'Conference Finals', 'NBA Finals']
    the pointer through exactly the same list, so both go through here. */
 function slotsOf(p){
   const CAL = calendar(p);
-  const PO = (LOGPART === 'season' ? [] : (p.polog || []));
-  const SEASON = (LOGPART === 'po' ? [] : CAL);
+  const PO = POON ? (p.polog || []) : [];
+  const SEASON = CAL;
   const GAP = (PO.length && SEASON.length) ? 2 : 0;
   return {CAL, PO, SEASON, GAP,
           SLOTS: SEASON.concat(Array.from({length: GAP}, () => ({gap: true})),
@@ -1016,9 +1017,9 @@ function logPanel(p, m){
           >${k[1]}</button>`).join('')}</span>`
     : '';
   const parts = (p.polog && p.polog.length)
-    ? `<span class="ltabs mtabs">${[['season','Season'],['po','Playoffs'],['both','Both']]
-        .map(k => `<button class="ltab ${k[0] === LOGPART ? 'on' : ''}"
-          onclick="setLogPart('${k[0]}')">${k[1]}</button>`).join('')}</span>`
+    ? `<span class="ltabs mtabs"><button class="ltab ${POON ? 'on' : ''}"
+         onclick="togglePo()" title="Add his playoff run to the end of the chart"
+         >Playoffs</button></span>`
     : '';
   return `<div class="loghd">
     <span class="kick">Every game, ${(METRICS[m] || METRICS.pts).name}</span>${modes}${parts}
@@ -1279,7 +1280,7 @@ function playerCard(p){
           <div class="kick" style="margin-bottom:6px">Where the points came from</div>
           ${mixBar(p)}
         </div>
-        <div class="panel logwrap" style="padding:13px 15px" data-metric="${METRIC}:${LOGMODE}:${LOGPART}">
+        <div class="panel logwrap" style="padding:13px 15px" data-metric="${METRIC}:${LOGMODE}:${POON ? 'po' : 'rs'}">
           ${logPanel(p, METRIC)}
         </div>
       </div>
@@ -1623,9 +1624,9 @@ function setLogMode(d){
   try { localStorage.setItem('nba.logmode', d); } catch(e) {}
   paintLog(cur);
 }
-function setLogPart(d){
-  LOGPART = d;
-  try { localStorage.setItem('nba.logpart', d); } catch(e) {}
+function togglePo(){
+  POON = !POON;
+  try { localStorage.setItem('nba.poon', POON ? '1' : '0'); } catch(e) {}
   paintLog(cur);
 }
 /* Re-rendering all 100 charts on every switch is wasteful, so a card is brought up to
@@ -1634,7 +1635,7 @@ function paintLog(i){
   const c = CARDS[i];
   if (!c || c.kind !== 'player') return;
   const el = cards[i] && cards[i].querySelector('.logwrap');
-  const want = METRIC + ':' + LOGMODE + ':' + LOGPART;
+  const want = METRIC + ':' + LOGMODE + ':' + (POON ? 'po' : 'rs');
   if (!el || el.dataset.metric === want) return;
   el.innerHTML = logPanel(c.p, METRIC);
   el.dataset.metric = want;
