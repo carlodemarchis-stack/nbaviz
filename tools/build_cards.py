@@ -361,6 +361,21 @@ def main(label):
         #    threes made, free throws made]
         # The last two are what colours the game chart: threes*3 and free throws come
         # straight out, and everything left over came from twos.
+        # His team's record IN THE GAMES HE PLAYED -- not the team's season record.
+        # A player who missed 13 games did not take part in those results.
+        wl = [0, 0]
+        for x in log:
+            gm = (sched.get(x[6]) or [])[x[7]] if 0 <= x[7] < len(sched.get(x[6], [])) else None
+            if gm and gm.get("res") == "W":
+                wl[0] += 1
+            elif gm and gm.get("res") == "L":
+                wl[1] += 1
+        powl = [0, 0]
+        for g in pologs.get(p["id"], []):
+            if g[11] == "W":
+                powl[0] += 1
+            elif g[11] == "L":
+                powl[1] += 1
         tix = {t["t"]: i for i, t in enumerate(p["teams"])}
         game_log = [[tix.get(x[6], 0), x[7], x[5], x[2], x[3], x[4], x[8]] for x in log]
         out_players.append({
@@ -381,7 +396,7 @@ def main(label):
             "ftm": int(rs.get("freeThrowsMade", 0)), "fta": int(rs.get("freeThrowsAttempted", 0)),
             "reb": int(rs.get("rebounds", 0)), "ast": int(rs.get("assists", 0)),
             "dd": int(rs.get("doubleDouble", 0)), "td": int(rs.get("tripleDouble", 0)),
-            "log": pts_log, "glog": game_log,
+            "log": pts_log, "glog": game_log, "wl": wl,
             "highs": {"pts": max(pts_log or [0]),
                       "reb": max((x[2] for x in log), default=0),
                       "ast": max((x[3] for x in log), default=0),
@@ -391,7 +406,8 @@ def main(label):
                     "ppg": r1(p["po"].get("avgPoints", 0)),
                     "mpg": r1(p["po"].get("avgMinutes", 0)),
                     "rpg": r1(p["po"].get("avgRebounds", 0)),
-                    "apg": r1(p["po"].get("avgAssists", 0))}
+                    "apg": r1(p["po"].get("avgAssists", 0)),
+                    "wl": powl}
                    if p.get("po") else None),
             # No playoff line, but his team played: say so, otherwise the missing row
             # reads the same as "team missed the playoffs" and the reader can't tell

@@ -1257,7 +1257,8 @@ function playerCard(p){
         <div class="box"><div class="kv">
           <div><div class="v">${p.pts}</div><div class="k">Points — no. ${p.rank}</div></div>
           <div><div class="v">${p.ppg}</div><div class="k">Points avg</div></div>
-          <div><div class="v">${p.gp}</div><div class="k">Games</div></div>
+          <div><div class="v vg">${pie(p.wl ? p.wl[0] / (p.gp || 1) * 100 : 0, 'var(--win)')}<span>${p.gp}</span></div>
+            <div class="k">Games${p.wl ? ` · ${p.wl[0]}-${p.wl[1]}` : ''}</div></div>
           <div><div class="v">${p.mpg}</div><div class="k">Minutes avg</div></div>
           <div><div class="v">${p.rpg}</div><div class="k">Rebounds avg</div></div>
           <div><div class="v">${p.apg}</div><div class="k">Assists avg</div></div>
@@ -1276,7 +1277,8 @@ function playerCard(p){
         ${p.po ? `<div class="box"><div class="kv">
           <div><div class="v potitle">Playoffs</div></div>
           <div><div class="v">${p.po.ppg}${delta(p.po.ppg, p.ppg)}</div><div class="k">Points avg</div></div>
-          <div><div class="v">${p.po.gp}</div><div class="k">Games</div></div>
+          <div><div class="v vg">${pie(p.po.wl ? p.po.wl[0] / (p.po.gp || 1) * 100 : 0, 'var(--win)')}<span>${p.po.gp}</span></div>
+            <div class="k">Games${p.po.wl ? ` · ${p.po.wl[0]}-${p.po.wl[1]}` : ''}</div></div>
           <div><div class="v">${p.po.mpg}${delta(p.po.mpg, p.mpg)}</div><div class="k">Minutes avg</div></div>
           <div><div class="v">${p.po.rpg}${delta(p.po.rpg, p.rpg)}</div><div class="k">Rebounds avg</div></div>
           <div><div class="v">${p.po.apg}${delta(p.po.apg, p.apg)}</div><div class="k">Assists avg</div></div>
