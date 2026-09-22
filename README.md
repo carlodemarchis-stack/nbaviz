@@ -100,6 +100,14 @@ every scoring player appears in a box score   578
 official games-played — the check that caught the Cup final leaking into 6 players' logs —
 and that all 6,908 game-log pointers resolve to a game played on the right date.
 
+## The top bar
+
+One strip on both pages: **Season · Players · Player stats · Teams · Team stats**, where
+*Season* is the towers view. From the film it links out to the towers; from the towers the
+other four link into the film **by name** (`index-2025-26.html#player-stats`), so the
+towers page never has to know where a section's cards start. The film pill sits on the
+right, a marker on the film and a way back from the towers.
+
 ## Layout rules that are load-bearing
 
 - **The towers' baseline is shared by all 30 teams.** Cell size is derived from the

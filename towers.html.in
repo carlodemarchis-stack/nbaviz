@@ -154,15 +154,15 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
 
 <div id="topbar">
   <div id="ttl">NBA <b>__SEASON__</b> · Season Towers</div>
-  <div class="seg">
-    <a class="pill" id="filmlink" href="index.html">Film</a>
-    <span class="pill on">Towers</span>
-  </div>
-  <span class="lab">Season</span><div class="seg" id="seasons"></div>
+  <!-- The same strip as the film, so the bar reads the same on both pages: this view
+       first, then the film's four sections, each linked by name. The season switcher
+       loses its "Season" label here -- that word now belongs to the pill. -->
+  <div class="seg" id="strip"></div>
+  <div class="seg" id="seasons"></div>
   <div class="grow"></div>
   <span class="lab">Group</span><div class="seg" id="groups"></div>
   <span class="lab">Order</span><div class="seg" id="sorts"></div>
-  <div id="credit">Produced with passion by <b>Carlo De Marchis</b> ·
+  <div id="credit"><span id="filmmark"></span>Produced with passion by <b>Carlo De Marchis</b> ·
     <a href="#" onclick="openMod('cmodal');return false">Credits</a></div>
 </div>
 
@@ -464,7 +464,13 @@ function drawSorts(){
 }
 drawGroups(); drawSorts();
 
-document.getElementById('filmlink').href = `index-${SEASON}.html`;
+document.getElementById('strip').innerHTML =
+  `<span class="pill on">Season</span>` +
+  [['Players','players'], ['Player stats','player-stats'],
+   ['Teams','teams'], ['Team stats','team-stats']].map(([n, slug]) =>
+    `<a class="pill" href="index-${SEASON}.html#${slug}">${n}</a>`).join('');
+document.getElementById('filmmark').innerHTML =
+  `<a class="pill" href="index-${SEASON}.html" style="margin-right:10px">Film</a>`;
 document.getElementById('seasons').innerHTML = (D.seasons || [SEASON]).map(s =>
   s === SEASON ? `<span class="pill on">${s}</span>`
                : `<a class="pill" href="towers-${s}.html">${s}</a>`).join('');

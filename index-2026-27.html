@@ -66,6 +66,7 @@ a{color:inherit}
 #ctx{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 0}
 #ctx b{color:var(--ink)}
 #pills{display:flex;gap:6px;flex:0 0 auto}
+#pills .pill{text-decoration:none}   /* the strip leads with a link, not a button */
 .seg{display:flex;gap:5px}
 .seg .pill{text-decoration:none}
 .pill{border:1px solid var(--line);background:var(--pan2);color:var(--dim);
@@ -429,14 +430,13 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
 <body>
 
 <div id="topbar">
-  <div class="seg" style="flex:0 0 auto">
-    <span class="pill on">Film</span>
-    <a class="pill" id="towlink" href="towers.html" style="text-decoration:none">Towers</a>
-  </div>
+  <!-- One strip: the towers view of the season, then this film's four sections. The
+       film pill lives on the right, since on this page it is a marker rather than a
+       destination. -->
+  <div id="pills"></div>
   <div class="seg" id="seasons" style="flex:0 0 auto"></div>
   <div id="ctx"></div>
-  <div id="pills"></div>
-  <div id="credit">Produced with passion by <b>Carlo De Marchis</b> ·
+  <div id="credit"><span class="pill on" style="margin-right:10px">Film</span>Produced with passion by <b>Carlo De Marchis</b> ·
     <a href="#" onclick="openMod('cmodal');return false">Credits</a></div>
 </div>
 
@@ -573,6 +573,8 @@ const CARDS = [{kind:'cover'}]
   .concat(TCHARTS.map(k => ({kind:k})));
 
 /* A section with nothing in it gets no pill -- 2026-27 ships with no players at all. */
+const secSlug = n => String(n).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
 const SECTIONS = [
   ['Players',      1, D.players.length],
   ['Player stats', 1 + D.players.length, PCHARTS.length],
@@ -973,8 +975,8 @@ function coverCard(){
   return `<div class="in"><div class="cover">
     <div class="kick">A Guy With A Scarf · Season Film</div>
     <h1>The NBA season,<br><em>card by card</em></h1>
-    <p>${SEASON}, read end to end: one card for every franchise in order of record,
-      then the ${players} leading scorers, then the charts that explain the year.
+    <p>${SEASON}, read end to end: the ${players} leading scorers, the charts that rank
+      them, then every franchise in order of record and the ladder they finished on.
       ${champ ? `<b>${esc(champ.name)}</b> finished it as champions.` : ''}</p>
     <div class="cstat">
       <div><div class="v">${teams}</div><div class="k">Franchises</div></div>
@@ -1347,8 +1349,10 @@ film.innerHTML = CARDS.map(c => {
   return `<section class="card">${body}</section>`;
 }).join('');
 
-document.getElementById('pills').innerHTML = SECTIONS.map((s,i) =>
-  `<button class="pill" data-sec="${i}" onclick="go(${s.at})">${s.name}</button>`).join('');
+document.getElementById('pills').innerHTML =
+  `<a class="pill" id="towlink" href="towers-${SEASON}.html">Season</a>` +
+  SECTIONS.map((s,i) =>
+    `<button class="pill" data-sec="${i}" onclick="go(${s.at})">${s.name}</button>`).join('');
 
 document.getElementById('cnote').textContent =
   `${D.counts.teams} team cards · ${D.counts.players} player cards drawn from a pool of ` +
@@ -1356,7 +1360,6 @@ document.getElementById('cnote').textContent =
 
 /* Every page is written season-suffixed, so all cross-links can be built from the
    season name alone; index.html / towers.html are copies of the default season. */
-document.getElementById('towlink').href = `towers-${SEASON}.html`;
 document.getElementById('seasons').innerHTML = (D.seasons || [SEASON]).map(s =>
   s === SEASON ? `<span class="pill on">${s}</span>`
                : `<a class="pill" href="index-${s}.html">${s}</a>`).join('');
@@ -1574,7 +1577,8 @@ function paint(){
   // Scoped to #pills on purpose: the top bar also holds the Film/Towers toggle and the
   // season pills, and an unscoped '.pill' lit those up by index instead -- the Film page
   // ended up highlighting "Towers".
-  document.querySelectorAll('#pills .pill').forEach((p,i) => p.classList.toggle('on', i === s));
+  document.querySelectorAll('#pills .pill[data-sec]').forEach(p =>
+    p.classList.toggle('on', +p.dataset.sec === s));
   const want = '#' + (cur + 1);
   if (location.hash !== want) history.replaceState(null, '', want);
   try { localStorage.setItem('nba.card', cur); } catch(e) {}
@@ -1711,8 +1715,13 @@ film.addEventListener('touchend', e => {
 /* Standing rule across these apps: a reload lands where you were, never card 1. */
 (function start(){
   let i = 0;
-  const h = parseInt(location.hash.replace('#',''), 10);
-  if (h >= 1 && h <= CARDS.length) i = h - 1;
+  const raw = decodeURIComponent(location.hash.replace('#', ''));
+  const h = parseInt(raw, 10);
+  // A section can be linked by name -- index-2025-26.html#players -- so the towers page
+  // can jump straight into one without knowing where its cards start.
+  const named = SECTIONS.find(x => secSlug(x.name) === raw.toLowerCase());
+  if (named) i = named.at;
+  else if (h >= 1 && h <= CARDS.length) i = h - 1;
   else { try { const s = +localStorage.getItem('nba.card'); if (s >= 0 && s < CARDS.length) i = s; }
          catch(e){} }
   go(i, false);
