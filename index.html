@@ -203,12 +203,30 @@ a{color:inherit}
    the colour, because winColor hands back #rrggbb, rgb() or a var() depending on the
    team, and none of those take an alpha the same way. */
 .jerseybox{position:absolute;top:6px;right:15px;text-align:right;pointer-events:none}
+.jerseybox .jteam{pointer-events:auto}
 .jerseyno{display:block;font-weight:700;line-height:.82;opacity:.26;
   font-variant-numeric:tabular-nums;letter-spacing:-.03em;font-size:clamp(52px,7.4vw,104px)}
 /* The team, in its own colour, under its own number. Smaller type needs more of the
    colour than the watermark does to stay legible. */
-.jteam{display:block;margin-top:5px;font-size:11px;font-weight:700;letter-spacing:.02em;
-  opacity:.62;white-space:nowrap}
+/* A chip, not loose text. At .62 alpha of a dark team colour, over a photo, the name and
+   its link rule both vanished -- and a plate in the team's own colour lifts it off
+   whatever happens to be behind it while reading as something you can press.
+   Dark scrim, near-white text, team colour in the BORDER. Two measured dead ends got it
+   here: tinting the plate with the same hue as the text put Philadelphia at 1.94:1
+   against its own plate, and keeping the text in the team colour still left six teams
+   under 3:1 -- the lifted blues and purples (SAC, PHI, NY, DET) have low luminance
+   whatever winColor does to them. The border identifies the team; the text just has to
+   be readable. */
+.jteam{display:inline-block;margin-top:7px;padding:4px 10px;border-radius:99px;
+  font-size:11px;font-weight:700;letter-spacing:.02em;white-space:nowrap;
+  color:rgba(232,236,245,.92);
+  background:rgba(7,9,16,.66);border:1px solid rgba(255,255,255,.14);
+  border-color:color-mix(in srgb, var(--tc) 60%, transparent);
+  transition:background .12s,border-color .12s}
+.jerseybox:hover .jteam{background:rgba(7,9,16,.88);color:#fff;
+  border-color:var(--tc)}
+/* Inside the chip the dotted rule is noise -- the chip itself is the affordance. */
+.jteam .xl{border-bottom:none}
 .rankno{position:absolute;top:8px;left:13px;pointer-events:none}
 .rankno b{display:block;font-weight:700;line-height:.82;color:rgba(232,236,245,.13);
   font-variant-numeric:tabular-nums;letter-spacing:-.03em;font-size:clamp(26px,3.7vw,52px)}
@@ -1125,7 +1143,7 @@ function playerCard(p){
         <div class="shot">
           <div class="rankno"${p.rank >= 100 ? ' style="--rw:16cqw"' : ''}>
             <b>${p.rank}</b><em>${p.pts.toLocaleString('en-US')}</em><span>points</span></div>
-          <div class="jerseybox" style="color:${winColor(t)}">
+          <div class="jerseybox" style="--tc:${winColor(t)};color:${winColor(t)}">
             ${p.jersey ? `<b class="jerseyno">${esc(p.jersey)}</b>` : ''}
             <span class="jteam">${tlink(p.team, esc(t.name || p.team))}</span></div>
           <img src="${head(p.id)}" alt="${esc(p.name)}" loading="lazy"
