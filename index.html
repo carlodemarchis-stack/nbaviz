@@ -114,6 +114,9 @@ a{color:inherit}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .v{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25}
 .v small{font-size:11px;font-weight:300;color:var(--dim)}
+/* playoff-vs-regular-season delta chip: the question a playoff split is actually asked to answer */
+.dlt{font-size:10px;font-weight:600;letter-spacing:.02em;margin-left:5px;vertical-align:2px}
+.dlt.up{color:var(--win)} .dlt.dn{color:var(--loss)} .dlt.fl{color:var(--dim)}
 /* A shooting percentage gets a pie of itself beside the number, in the same red / blue /
    grey the points mix uses, so the three rates are comparable at a glance instead of
    being three numbers you have to hold in your head. */
@@ -1010,6 +1013,17 @@ function shotChart(p){
 }
 
 /* Where a player's points came from: twos, threes, free throws. */
+// Playoff value against the regular-season one. Rounded to a tenth to match the
+// printed figures; anything inside +/-0.05 reads as level rather than a fake +0.0.
+function delta(po, rs){
+  if (po == null || rs == null) return '';
+  const d = Math.round((po - rs) * 10) / 10;
+  if (!isFinite(d)) return '';
+  const cls = d > 0 ? 'up' : d < 0 ? 'dn' : 'fl';
+  const txt = d > 0 ? `+${d.toFixed(1)}` : d < 0 ? `\u2212${Math.abs(d).toFixed(1)}` : '\u00b70\u00b7';
+  return `<span class="dlt ${cls}" title="vs regular season">${d === 0 ? 'level' : txt}</span>`;
+}
+
 function mixBar(p){
   const three = p.tpm * 3, ft = p.ftm, two = Math.max(0, p.pts - three - ft);
   const tot = Math.max(1, two + three + ft);
@@ -1182,9 +1196,9 @@ function playerCard(p){
         </div></div>
         ${p.po ? `<div class="box"><div class="kv">
           <div><div class="v">${p.po.gp}</div><div class="k">Playoff games</div></div>
-          <div><div class="v">${p.po.ppg}</div><div class="k">Playoff points avg</div></div>
-          <div><div class="v">${p.po.rpg}</div><div class="k">Playoff rebounds avg</div></div>
-          <div><div class="v">${p.po.apg}</div><div class="k">Playoff assists avg</div></div>
+          <div><div class="v">${p.po.ppg}${delta(p.po.ppg, p.ppg)}</div><div class="k">Playoff points avg</div></div>
+          <div><div class="v">${p.po.rpg}${delta(p.po.rpg, p.rpg)}</div><div class="k">Playoff rebounds avg</div></div>
+          <div><div class="v">${p.po.apg}${delta(p.po.apg, p.apg)}</div><div class="k">Playoff assists avg</div></div>
         </div></div>` : ''}
         <div class="panel" style="padding:12px 15px;flex:0 0 auto">
           <div class="kick" style="margin-bottom:6px">Where the points came from</div>
