@@ -215,6 +215,10 @@ a{color:inherit}
 /* His won-lost in the games he played, under the team name on the photo. */
 .jwl{display:block;margin-top:4px;font-size:12px;font-weight:700;letter-spacing:.06em;
   color:rgba(232,236,245,.66);font-variant-numeric:tabular-nums;pointer-events:auto}
+/* How that season ended, under the record. */
+.jpo{display:block;margin-top:2px;font-size:10px;font-weight:600;letter-spacing:.04em;
+  color:var(--dim);pointer-events:auto}
+.jpo.champ{color:var(--gold);font-weight:800}
 /* Outlined like a real jersey numeral: a soft fill with a brighter edge. Fill and edge
    need separate alphas, so the tint goes in the colours rather than on the element --
    an element opacity would dim both together. The plain rgba line is the fallback. */
@@ -1256,7 +1260,9 @@ function playerCard(p){
             ${p.wl ? `<span class="jwl" title="${traded
                 ? `Record across both teams in the ${p.gp} games he played`
                 : `${esc(t.name || p.team)}'s record in the ${p.gp} games he played`}"
-              >${p.wl[0]}-${p.wl[1]}</span>` : ''}</div>
+              >${p.wl[0]}-${p.wl[1]}</span>` : ''}
+            ${(() => { const e = poEnding(t); return `<span class="jpo${e.champ ? ' champ' : ''}"
+              >${e.txt}</span>`; })()}</div>
           <img src="${head(p.id)}" alt="${esc(p.name)}" loading="lazy"
                onerror="this.style.display='none'">
         </div>
@@ -1372,6 +1378,17 @@ function ladderCard(){
 }
 
 /* A filled wedge, not a ring: at 20px a wedge reads as "a bit under half" far better. */
+/* How the player's team ended its season, for under the record on the photo.
+   Outcomes come from playoff_run(): CHAMPIONS, "Lost the NBA Finals",
+   "Lost the <round>", or nothing at all if they never made it. */
+function poEnding(t){
+  const o = (t && t.po && t.po.outcome) || '';
+  if (!o) return {txt: 'Did not qualify', champ: false};
+  if (o === 'CHAMPIONS') return {txt: 'Champions', champ: true};
+  if (/NBA Finals/.test(o)) return {txt: 'Lost the Finals', champ: false};
+  return {txt: o.replace(/^Lost the /, 'Out in the '), champ: false};
+}
+
 function pie(pct, colour){
   const p = Math.max(0, Math.min(100, +pct || 0));
   const a = 2 * Math.PI * (p / 100) - Math.PI / 2;
