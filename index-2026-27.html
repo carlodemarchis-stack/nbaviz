@@ -119,6 +119,9 @@ a{color:inherit}
 .dlt.up{color:var(--win)} .dlt.dn{color:var(--loss)} .dlt.fl{color:var(--dim)}
 /* his team played on without him: distinguish a DNP from a team that missed out */
 .pomiss{color:var(--dim);font-size:11.5px;letter-spacing:.02em}
+/* Row label in a value slot: the playoff row mirrors row 1's columns, so the
+   first cell names the row instead of carrying a number. */
+.v.potitle{font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 /* A shooting percentage gets a pie of itself beside the number, in the same red / blue /
    grey the points mix uses, so the three rates are comparable at a glance instead of
    being three numbers you have to hold in your head. */
@@ -1271,10 +1274,12 @@ function playerCard(p){
           <div><div class="v">${p.highs.pts}</div><div class="k">Best night</div></div>
         </div></div>
         ${p.po ? `<div class="box"><div class="kv">
-          <div><div class="v">${p.po.gp}</div><div class="k">Playoff games</div></div>
-          <div><div class="v">${p.po.ppg}${delta(p.po.ppg, p.ppg)}</div><div class="k">Playoff points avg</div></div>
-          <div><div class="v">${p.po.rpg}${delta(p.po.rpg, p.rpg)}</div><div class="k">Playoff rebounds avg</div></div>
-          <div><div class="v">${p.po.apg}${delta(p.po.apg, p.apg)}</div><div class="k">Playoff assists avg</div></div>
+          <div><div class="v potitle">Playoffs</div></div>
+          <div><div class="v">${p.po.ppg}${delta(p.po.ppg, p.ppg)}</div><div class="k">Points avg</div></div>
+          <div><div class="v">${p.po.gp}</div><div class="k">Games</div></div>
+          <div><div class="v">${p.po.mpg}${delta(p.po.mpg, p.mpg)}</div><div class="k">Minutes avg</div></div>
+          <div><div class="v">${p.po.rpg}${delta(p.po.rpg, p.rpg)}</div><div class="k">Rebounds avg</div></div>
+          <div><div class="v">${p.po.apg}${delta(p.po.apg, p.apg)}</div><div class="k">Assists avg</div></div>
         </div></div>` : p.poMiss ? `<div class="box pomiss">Did not appear in the playoffs \u2014 ${esc(p.team)} ${esc(p.poMiss)}</div>` : ''}
         <div class="panel" style="padding:12px 15px;flex:0 0 auto">
           <div class="kick" style="margin-bottom:6px">Where the points came from</div>

@@ -389,6 +389,7 @@ def main(label):
             "shots": shot.get(p["id"]),
             "po": ({"gp": int(p["po"].get("gamesPlayed", 0)),
                     "ppg": r1(p["po"].get("avgPoints", 0)),
+                    "mpg": r1(p["po"].get("avgMinutes", 0)),
                     "rpg": r1(p["po"].get("avgRebounds", 0)),
                     "apg": r1(p["po"].get("avgAssists", 0))}
                    if p.get("po") else None),
