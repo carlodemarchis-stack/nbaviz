@@ -100,6 +100,18 @@ every scoring player appears in a box score   578
 official games-played — the check that caught the Cup final leaking into 6 players' logs —
 and that all 6,908 game-log pointers resolve to a game played on the right date.
 
+## Cross-links
+
+Every team name jumps to that franchise's card, every player name to his: the player
+card's team (meta line and under the jersey), the team card's roster and its
+biggest-win/heaviest-defeat opponents, the scoring race (both name and team), the shot
+diet, the ladder, the cover's champion, and a column on the biggest-nights chart. 477 of
+them, built from `CARDS` so the indices cannot drift from the deck order.
+
+A roster lists everyone who played but only the top 100 have cards, so `plink()` returns
+plain text rather than a link that goes nowhere. The nights columns are clickable only
+where a pointer hovers — on touch, the tap is how the panel is opened at all.
+
 ## The top bar
 
 One strip on both pages: **Season · Players · Player stats · Teams · Team stats**, where

@@ -242,6 +242,11 @@ a{color:inherit}
   padding:3px 9px;cursor:pointer;line-height:1}
 .ltab:hover{color:var(--ink)}
 .ltab.on{color:var(--ink);border-color:rgba(150,166,205,.3);background:var(--pan)}
+/* A cross-link keeps the colour of whatever it sits in and announces itself with a
+   dotted rule, so a hundred of them do not turn the deck blue. */
+.xl{color:inherit;text-decoration:none;border-bottom:1px dotted rgba(150,166,205,.4);
+  cursor:pointer}
+.xl:hover{color:var(--ink);border-bottom-color:currentColor}
 .pmeta{display:flex;align-items:center;gap:11px}
 .pmeta img{width:34px;height:34px;flex:0 0 auto}
 .pname{font-size:clamp(21px,2.4vw,33px);font-weight:700;line-height:1.03;letter-spacing:-.015em}
@@ -301,6 +306,7 @@ a{color:inherit}
 .nbar{width:100%;border-radius:3px 3px 0 0;position:relative;overflow:hidden;
   transition:filter .1s}
 .nb:hover .nbar{filter:brightness(1.4)}
+@media (hover:hover){ .nb{cursor:pointer} }
 /* The name is anchored to the FOOT of its own column and reads upward, so a long one
    runs into the empty part of the bar rather than off the top of a short one. */
 .nnm{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;
@@ -582,12 +588,28 @@ const CARDS = [{kind:'cover'}]
 /* A section with nothing in it gets no pill -- 2026-27 ships with no players at all. */
 const secSlug = n => String(n).toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
+/* Cross-links. A team name anywhere jumps to that franchise's card, a player name to his.
+   Built from CARDS so the indices cannot drift from the deck order. A roster lists
+   everyone who played, but only the top 100 have cards -- plink() hands back plain text
+   for the rest rather than a link that goes nowhere. */
+const CARD_OF_TEAM = {}, CARD_OF_PLAYER = {};
+const xlink = (i, html) => i == null
+  ? html
+  : `<a class="xl" href="#${i + 1}" onclick="go(${i});return false">${html}</a>`;
+const tlink = (ab, html) => xlink(CARD_OF_TEAM[ab], html);
+const plink = (id, html) => xlink(CARD_OF_PLAYER[id], html);
+
 const SECTIONS = [
   ['Players',      1, D.players.length],
   ['Player stats', 1 + D.players.length, PCHARTS.length],
   ['Teams',        1 + D.players.length + PCHARTS.length, D.teams.length],
   ['Team stats',   1 + D.players.length + PCHARTS.length + D.teams.length, TCHARTS.length],
 ].filter(x => x[2] > 0).map(x => ({name: x[0], at: x[1]}));
+
+CARDS.forEach((c, i) => {
+  if (c.kind === 'team') CARD_OF_TEAM[c.t.abbr] = i;
+  if (c.kind === 'player') CARD_OF_PLAYER[c.p.id] = i;
+});
 
 /* ---------- drawing helpers ---------- */
 
@@ -984,7 +1006,7 @@ function coverCard(){
     <h1>The NBA season,<br><em>card by card</em></h1>
     <p>${SEASON}, read end to end: the ${players} leading scorers, the charts that rank
       them, then every franchise in order of record and the ladder they finished on.
-      ${champ ? `<b>${esc(champ.name)}</b> finished it as champions.` : ''}</p>
+      ${champ ? `<b>${tlink(champ.abbr, esc(champ.name))}</b> finished it as champions.` : ''}</p>
     <div class="cstat">
       <div><div class="v">${teams}</div><div class="k">Franchises</div></div>
       <div><div class="v">${games.toLocaleString()}</div><div class="k">Games</div></div>
@@ -1020,7 +1042,7 @@ function teamCard(t){
         <span class="n">AST<i>avg</i></span></div>
       <div class="rgrid">${t.roster.map(r => {
         const nm = NAMES[r.id] || ['—',''];
-        return `<div class="rrow"><span class="nm">${esc(nm[0])}<i>${esc(nm[1])}</i></span>
+        return `<div class="rrow"><span class="nm">${plink(r.id, esc(nm[0]))}<i>${esc(nm[1])}</i></span>
           <span class="n">${r.g}</span><span class="n">${r.ppg}</span>
           <span class="n">${r.rpg}</span><span class="n">${r.apg}</span></div>`;
       }).join('')}</div></div>` : '';
@@ -1070,10 +1092,10 @@ function teamCard(t){
         </div>
         ${(t.best && t.worst) ? `<div class="box"><div class="kv" style="grid-template-columns:1fr 1fr">
           <div><div class="v" style="font-size:15px">${t.best.us}-${t.best.them}
-            <small>v ${esc(t.best.opp)}</small></div>
+            <small>v ${tlink(t.best.opp, esc(t.best.opp))}</small></div>
             <div class="k">Biggest win · ${t.best.date}</div></div>
           <div><div class="v" style="font-size:15px">${t.worst.us}-${t.worst.them}
-            <small>v ${esc(t.worst.opp)}</small></div>
+            <small>v ${tlink(t.worst.opp, esc(t.worst.opp))}</small></div>
             <div class="k">Heaviest defeat · ${t.worst.date}</div></div>
         </div></div>` : ''}
         ${roster}
@@ -1097,7 +1119,7 @@ function playerCard(p){
             <div class="psub">${p.jersey ? '#' + esc(p.jersey) + ' · ' : ''}${traded
               ? `<span style="color:var(--acc)">${p.teams.map(x =>
                   `${esc(x.t)} ${x.g}`).join(' → ')}</span>`
-              : esc(t.name || p.team)}<span class="pdim"> · ${esc(bio)}</span></div>
+              : tlink(p.team, esc(t.name || p.team))}<span class="pdim"> · ${esc(bio)}</span></div>
           </div>
         </div>
         <div class="shot">
@@ -1105,7 +1127,7 @@ function playerCard(p){
             <b>${p.rank}</b><em>${p.pts.toLocaleString('en-US')}</em><span>points</span></div>
           <div class="jerseybox" style="color:${winColor(t)}">
             ${p.jersey ? `<b class="jerseyno">${esc(p.jersey)}</b>` : ''}
-            <span class="jteam">${esc(t.name || p.team)}</span></div>
+            <span class="jteam">${tlink(p.team, esc(t.name || p.team))}</span></div>
           <img src="${head(p.id)}" alt="${esc(p.name)}" loading="lazy"
                onerror="this.style.display='none'">
         </div>
@@ -1178,7 +1200,8 @@ function raceCard(){
       return `<div class="crow"><span class="rk">${i+1}</span>
         <span class="cbar"><i style="width:${(p.pts/max*100).toFixed(1)}%;
           background:${t.primary || 'var(--acc)'}"></i>
-          <span>${esc(p.name)} <b style="color:var(--dim);font-weight:300">${esc(p.team)}</b></span></span>
+          <span>${plink(p.id, esc(p.name))}
+            <b style="color:var(--dim);font-weight:300">${tlink(p.team, esc(p.team))}</b></span></span>
         <span style="text-align:right"><b>${p.pts}</b></span></div>`;
     }).join('')}</div>
   </div>`;
@@ -1192,7 +1215,7 @@ function ladderCard(){
       <div class="lrow ${i === 10 ? 'cut' : ''}">
         <span class="rk" style="color:var(--dim);text-align:right">${t.seed || '–'}</span>
         <img src="${crest(t.abbr)}" alt="" loading="lazy">
-        <span class="nm">${esc(t.nick)}
+        <span class="nm">${tlink(t.abbr, esc(t.nick))}
           ${t.po && t.po.outcome === 'CHAMPIONS' ? '<b style="color:var(--gold)"> ★</b>' : ''}</span>
         <span style="text-align:right">${t.w}-${t.l}</span>
         <span style="text-align:right;color:${t.diff > 0 ? 'var(--win)' : 'var(--loss)'}">${sgn(t.diff)}</span>
@@ -1332,7 +1355,7 @@ function volumeCard(){
           <span style="position:absolute;inset:0 auto 0 0;width:${w.toFixed(1)}%;
             display:flex;border-radius:5px;overflow:hidden">
             ${part(three,'var(--three)')}${part(two,'var(--two)')}${part(ft,'var(--ft)')}</span>
-          <span style="left:9px">${esc(p.name)}</span></span>
+          <span style="left:9px">${plink(p.id, esc(p.name))}</span></span>
         <span style="text-align:right"><b>${tot}</b></span></div>`;
     }).join('')}
     </div>
@@ -1557,7 +1580,12 @@ film.addEventListener('mousemove', onHover);
 film.addEventListener('mouseleave', () => { clearHl(); hideTip(); });
 /* Touch has no hover: a tap on a column shows its panel, the next tap elsewhere hides it. */
 film.addEventListener('click', e => {
-  if (e.target.closest('.nb') || e.target.closest('.loghook')) onHover(e);
+  const col = e.target.closest('.nb');
+  if (col && matchMedia('(hover: hover)').matches){
+    const i = CARD_OF_PLAYER[(D.nights[+col.dataset.night] || {}).id];
+    if (i != null){ hideTip(); clearHl(); return go(i); }
+  }
+  if (col || e.target.closest('.loghook')) onHover(e);
   else { clearHl(); hideTip(); }
 });
 
