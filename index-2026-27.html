@@ -212,6 +212,9 @@ a{color:inherit}
    team, and none of those take an alpha the same way. */
 .jerseybox{position:absolute;top:6px;right:15px;text-align:right;pointer-events:none}
 .jerseybox .jteam{pointer-events:auto}
+/* His won-lost in the games he played, under the team name on the photo. */
+.jwl{display:block;margin-top:4px;font-size:12px;font-weight:700;letter-spacing:.06em;
+  color:rgba(232,236,245,.66);font-variant-numeric:tabular-nums;pointer-events:auto}
 /* Outlined like a real jersey numeral: a soft fill with a brighter edge. Fill and edge
    need separate alphas, so the tint goes in the colours rather than on the element --
    an element opacity would dim both together. The plain rgba line is the fallback. */
@@ -1236,10 +1239,12 @@ function playerCard(p){
           <img src="${crest(p.team)}" alt="${esc(p.team)}" loading="lazy">
           <div style="min-width:0">
             <div class="pname">${esc(p.name)}</div>
-            <div class="psub">${p.jersey ? '#' + esc(p.jersey) + ' · ' : ''}${traded
-              ? `<span style="color:var(--acc)">${p.teams.map(x =>
-                  `${esc(x.t)} ${x.g}`).join(' → ')}</span>`
-              : tlink(p.team, esc(t.name || p.team))}<span class="pdim"> · ${esc(bio)}</span></div>
+            <div class="psub">${[
+                p.jersey ? '#' + esc(p.jersey) : '',
+                traded ? `<span style="color:var(--acc)">${p.teams.map(x =>
+                  `${esc(x.t)} ${x.g}`).join(' → ')}</span>` : ''
+              ].filter(Boolean).join(' · ')}<span class="pdim">${
+                (p.jersey || traded) ? ' · ' : ''}${esc(bio)}</span></div>
           </div>
         </div>
         <div class="shot">
@@ -1247,7 +1252,11 @@ function playerCard(p){
             <b>${p.rank}</b><em>${p.pts.toLocaleString('en-US')}</em><span>points</span></div>
           <div class="jerseybox" style="--tc:${winColor(t)};color:${winColor(t)}">
             ${p.jersey ? `<b class="jerseyno">${esc(p.jersey)}</b>` : ''}
-            <span class="jteam">${tlink(p.team, esc(t.name || p.team))}</span></div>
+            <span class="jteam">${tlink(p.team, esc(t.name || p.team))}</span>
+            ${p.wl ? `<span class="jwl" title="${traded
+                ? `Record across both teams in the ${p.gp} games he played`
+                : `${esc(t.name || p.team)}'s record in the ${p.gp} games he played`}"
+              >${p.wl[0]}-${p.wl[1]}</span>` : ''}</div>
           <img src="${head(p.id)}" alt="${esc(p.name)}" loading="lazy"
                onerror="this.style.display='none'">
         </div>
@@ -1273,8 +1282,8 @@ function playerCard(p){
           <div><div class="v">${p.dd}</div><div class="k">Double-doubles</div></div>
           <div><div class="v">${p.td}</div><div class="k">Triple-doubles</div></div>
           <div><div class="v">${p.highs.pts}</div>
-            <div class="k">Best game${p.highs.opp
-              ? ` ${p.highs.ha === 'H' ? 'vs' : '@'} ${esc(p.highs.opp)}` : ''}</div></div>
+            <div class="k" title="Best game of the season">Best${p.highs.opp
+              ? ` ${p.highs.ha === 'H' ? 'vs' : '@'} ${esc(p.highs.opp)}` : ' night'}</div></div>
         </div></div>
         ${p.po ? `<div class="box"><div class="kv">
           <div><div class="v potitle">Playoffs</div></div>
