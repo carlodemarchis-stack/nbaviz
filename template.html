@@ -715,7 +715,7 @@ const secSlug = n => String(n).toLowerCase().replace(/[^a-z0-9]+/g, '-');
 const CARD_OF_TEAM = {}, CARD_OF_PLAYER = {};
 const xlink = (i, html) => i == null
   ? html
-  : `<a class="xl" href="#${i + 1}" onclick="go(${i});return false">${html}</a>`;
+  : `<a class="xl" href="#${i + 1}" onclick="closeMods();go(${i});return false">${html}</a>`;
 const tlink = (ab, html) => xlink(CARD_OF_TEAM[ab], html);
 const plink = (id, html) => xlink(CARD_OF_PLAYER[id], html);
 
@@ -1775,12 +1775,12 @@ function setMetric(m){
   if (!METRICS[m]) return;
   METRIC = m;
   try { localStorage.setItem('nba.metric', m); } catch(e) {}
-  paintLog(cur);
+  paintLog(cur); paintOverlayLog();
 }
 function setLogMode(d){
   LOGMODE = d;
   try { localStorage.setItem('nba.logmode', d); } catch(e) {}
-  paintLog(cur);
+  paintLog(cur); paintOverlayLog();
 }
 function togglePo(){
   POON = !POON;
@@ -1815,8 +1815,7 @@ function onHover(e){
 
 function logHover(e, box){
   const svg = box.querySelector('svg.log');
-  const card = box.closest('.card');
-  const p = (CARDS[cards.indexOf(card)] || {}).p;
+  const p = playerAt(box);
   if (!p || !p.log.length) return hideTip();
   const r = svg.getBoundingClientRect();
   // The chart's columns are the CALENDAR, not the appearances, so the pointer maps to a
@@ -1870,6 +1869,7 @@ function logHover(e, box){
 }
 
 film.addEventListener('mousemove', onHover);
+document.getElementById('pmodal').addEventListener('mousemove', onHover);
 film.addEventListener('mouseleave', () => { clearHl(); hideTip(); });
 /* Touch has no hover: a tap on a column shows its panel, the next tap elsewhere hides it. */
 film.addEventListener('click', e => {
@@ -1951,6 +1951,7 @@ function fs(){
    for the session. Per team rather than one bundle: a ~20 KB fetch scoped to the card
    already on screen beats a 700 KB fetch on the first click anywhere. */
 const ROSTER = {};
+let POPEN = null;                       // the player the overlay is showing, if any
 async function rosterOf(ab){
   if (!ROSTER[ab]) ROSTER[ab] = fetch(`data/roster/${SEASON}-${ab}.json`)
     .then(r => r.ok ? r.json() : Promise.reject(r.status));
@@ -1963,6 +1964,7 @@ async function openRoster(ab, id){
   try {
     const p = (await rosterOf(ab))[id];
     if (!p) throw 'missing';
+    POPEN = p;
     body.innerHTML = playerCard(p);
   } catch(e) {
     // Opened from a file:// URL a fetch is blocked outright, so say what happened
@@ -1976,7 +1978,25 @@ async function openRoster(ab, id){
 }
 
 function openMod(id){ closeMods(); document.getElementById(id).classList.add('on'); }
-function closeMods(){ document.querySelectorAll('.mod').forEach(m => m.classList.remove('on')); }
+function closeMods(){
+  document.querySelectorAll('.mod').forEach(m => m.classList.remove('on'));
+  POPEN = null; hideTip(); clearHl();
+}
+
+/* The overlay is not one of the deck's cards, so anything that resolves "which player is
+   this chart about" has to know about it. */
+function playerAt(el){
+  if (el.closest('#pbody')) return POPEN;
+  const card = el.closest('.card');
+  return card ? (CARDS[cards.indexOf(card)] || {}).p : null;
+}
+/* The metric tabs and the Split/Avg switch repaint the card you are on; when the overlay
+   is open, that is the overlay. */
+function paintOverlayLog(){
+  if (!POPEN) return;
+  const el = document.querySelector('#pbody .logwrap');
+  if (el) el.innerHTML = logPanel(POPEN, METRIC);
+}
 
 /* ---------- jump ---------- */
 const INDEX = CARDS.map((c,i) => {
