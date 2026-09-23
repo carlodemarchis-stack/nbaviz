@@ -100,6 +100,25 @@ every scoring player appears in a box score   578
 official games-played — the check that caught the Cup final leaking into 6 players' logs —
 and that all 6,908 game-log pointers resolve to a game played on the right date.
 
+## The other 478 players
+
+The deck stays at its 135 cards. Everyone outside the carded 100 is reachable from a team
+card's roster instead: the row opens an **overlay**, rendered by the same `playerCard()`,
+with his record fetched from `data/roster/<season>-<ABBR>.json` the first time a row on
+that team is opened. 30 files, 11–17 players each, 17–31 KB.
+
+Per team rather than one bundle — a ~20 KB fetch scoped to the card already on screen
+beats a 700 KB fetch on the first click anywhere. Page weight and node count are both
+unchanged; the overlay adds ~680 nodes only while it is open.
+
+Tail players carry no shot grid, so `.pleft.noshot` lets the portrait take the whole
+column. The overlay is outside `#film`, so anything that asks "which player is this chart
+about" goes through `playerAt()`, and `paintOverlayLog()` keeps its metric tabs working.
+
+**A fetch from a `file://` URL is blocked**, so overlay cards need the page served over
+http. The 135-card film still works straight off disk, and a failed fetch says so rather
+than spinning.
+
 ## Cross-links
 
 Every team name jumps to that franchise's card, every player name to his: the player
