@@ -124,15 +124,22 @@ a{color:inherit}
 .v.potitle{font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 /* The playoff row is marked in gold, the same gold that foots the playoff bars on the
    game chart, so the row and the chart read as one idea rather than two decorations. */
-/* Bracket, not a bar: border-left against the 14px corners curves at both ends, which
-   is the shape we want -- it reads as an embrace rather than a rule. */
-.pobar{border-left:3px solid var(--gold);background:rgba(240,194,74,.045)}
+/* The bracket OVERLAYS the box's left border rather than adding to the layout: a real
+   border-left (or a padded wrapper) would push its block inward and knock the KPI
+   columns out of line with the other block. As a pseudo-element it costs no width, so
+   every column lines up across the season and the playoffs.
+   Shape comes from a left border meeting the 14px corners -- it curves at both ends,
+   which is what makes it read as an embrace rather than a rule. */
+.pobar::before,.rsgroup::before{content:'';position:absolute;left:0;top:0;bottom:0;
+  width:14px;border-left:3px solid;border-top-left-radius:14px;
+  border-bottom-left-radius:14px;pointer-events:none}
+.pobar{position:relative;background:rgba(240,194,74,.045)}
+.pobar::before{border-color:var(--gold)}
 .pobar .potitle{color:var(--gold)}
 /* One bracket around BOTH regular-season rows, so the card reads as two blocks --
    his season, then his playoffs -- not three loose panels. */
-.rsgroup{display:flex;flex-direction:column;gap:11px;padding-left:11px;
-  border-left:3px solid var(--tc,var(--acc));
-  border-top-left-radius:14px;border-bottom-left-radius:14px}
+.rsgroup{position:relative;display:flex;flex-direction:column;gap:11px}
+.rsgroup::before{border-color:var(--tc,var(--acc))}
 /* Sits on the box's top line, so it costs no height. */
 .rskick{position:absolute;top:-6px;left:14px;padding:0 6px;background:var(--bg);
   font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
