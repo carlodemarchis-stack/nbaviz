@@ -114,6 +114,10 @@ a{color:inherit}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .v{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25}
 .v small{font-size:11px;font-weight:300;color:var(--dim)}
+/* His best single game for that stat, beside the average it is the peak of.
+   Regular season only -- a six-game playoff max is a different kind of number. */
+.v small.mx{font-size:10px;font-weight:600;letter-spacing:.02em;margin-left:6px;
+  color:rgba(150,166,205,.62)}
 /* playoff-vs-regular-season delta chip: the question a playoff split is actually asked to answer */
 .dlt{font-size:10px;font-weight:600;letter-spacing:.02em;margin-left:5px;vertical-align:2px}
 .dlt.up{color:var(--win)} .dlt.dn{color:var(--loss)} .dlt.fl{color:var(--dim)}
@@ -1313,12 +1317,15 @@ function playerCard(p){
         <div class="rsgroup" style="--tc:${winColor(t)}">
         <div class="box"><span class="rskick">Regular season</span><div class="kv">
           <div><div class="v">${p.pts}</div><div class="k">Points — no. ${p.rank}</div></div>
-          <div><div class="v">${p.ppg}</div><div class="k">Points avg</div></div>
+          <div><div class="v">${p.ppg}${p.highs.pts ? `<small class="mx">max ${p.highs.pts}</small>` : ''}</div>
+            <div class="k">Points avg</div></div>
           <div><div class="v vg">${pie(p.wl ? p.wl[0] / (p.gp || 1) * 100 : 0, 'var(--win)')}<span>${p.gp}</span></div>
             <div class="k">Games${p.wl ? ` · ${p.wl[0]}-${p.wl[1]}` : ''}</div></div>
           <div><div class="v">${p.mpg}</div><div class="k">Minutes avg</div></div>
-          <div><div class="v">${p.rpg}</div><div class="k">Rebounds avg</div></div>
-          <div><div class="v">${p.apg}</div><div class="k">Assists avg</div></div>
+          <div><div class="v">${p.rpg}${p.highs.reb ? `<small class="mx">max ${p.highs.reb}</small>` : ''}</div>
+            <div class="k">Rebounds avg</div></div>
+          <div><div class="v">${p.apg}${p.highs.ast ? `<small class="mx">max ${p.highs.ast}</small>` : ''}</div>
+            <div class="k">Assists avg</div></div>
         </div></div>
         <div class="box"><div class="kv">
           <div><div class="v vg">${pie(p.fg,'var(--two)')}<span>${p.fg}<small>%</small></span></div>
