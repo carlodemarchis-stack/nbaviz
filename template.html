@@ -205,8 +205,15 @@ a{color:inherit}
    the svg's columns because that svg is preserveAspectRatio="none", so its column c spans
    exactly c/N to (c+1)/N of the same width. The playoff gold stays on the bar's own foot,
    inside the chart, where it marks the bar rather than the night. */
-.gstrips{padding-left:34px;display:flex;flex-direction:column;gap:2px;margin-top:4px}
-.gstrip{display:flex;gap:1px;height:5px}
+.gstrips{padding-left:34px;display:flex;flex-direction:column;gap:3px;margin-top:5px}
+/* The label sits in the y-axis gutter, absolutely positioned so it takes no width from
+   the cells -- they have to stay on the bars' own grid. */
+.gstrip{position:relative;display:flex;gap:1px;height:5px}
+/* Not uppercased: the gutter is 35px between the panel padding and the first cell, and
+   "DOUBLES" in caps needs about 34 of them before letter-spacing. Mixed case fits. */
+.glab{position:absolute;left:-34px;width:31px;text-align:right;line-height:5px;
+  font-size:8px;letter-spacing:.01em;
+  color:rgba(150,166,205,.6);white-space:nowrap;pointer-events:none}
 .gstrip i{flex:1 1 0;min-width:0;border-radius:1px;background:transparent}
 .gstrip i.w{background:#7ce8ae}
 .gstrip i.l{background:#ff9089}
@@ -1150,8 +1157,10 @@ function logSvg(p, m){
       .toFixed(3)}%">Playoffs</i>`;
 
   const strips = `<div class="gstrips">
-    <div class="gstrip">${wlCell.map(k => `<i class="${k}"></i>`).join('')}</div>
-    <div class="gstrip">${dbCell.map(k => `<i class="${k}"></i>`).join('')}</div>
+    <div class="gstrip"><span class="glab">W-L</span>${
+      wlCell.map(k => `<i class="${k}"></i>`).join('')}</div>
+    <div class="gstrip"><span class="glab">Doubles</span>${
+      dbCell.map(k => `<i class="${k}"></i>`).join('')}</div>
   </div>`;
 
   return `<div class="arcbox loghook">${labels}<span class="wlwrap">${poLbl}</span>
