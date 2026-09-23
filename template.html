@@ -336,6 +336,9 @@ a{color:inherit}
    which hands the whole right column to the stats and the game-by-game chart. */
 .pleft{overflow:hidden}
 .pleft .shot{flex:0 0 50%;min-height:0}
+/* Without a shot chart under it there is nothing to share the column with, so the
+   portrait takes the lot instead of stopping half way down. */
+.pleft.noshot .shot{flex:1 1 auto}
 /* The shot-chart panel carries class .col, whose flex rule used to come from the old
    .pbot wrapper. Without it the panel is a plain block, .court's flex does nothing and
    the svg falls back to its intrinsic aspect height -- which runs off the card. */
@@ -417,16 +420,25 @@ a{color:inherit}
   justify-content:center;gap:16px;text-align:center;align-items:center}
 /* Madison Square Garden behind the title. Already darkened in the file; the gradient
    on top pins the centre darker still so the display type never fights the crowd. */
-.coverbg{position:absolute;inset:-18px -20px;z-index:-1;background-size:cover;
-  background-position:center 38%;opacity:.55;
-  -webkit-mask-image:radial-gradient(120% 90% at 50% 45%, transparent 8%, #000 72%);
-  mask-image:radial-gradient(120% 90% at 50% 45%, transparent 8%, #000 72%)}
+/* Photo with a scrim layered over it, not a global dim: the band behind the text is
+   darkened so the small copy stays readable, while the bowl above and below keeps its
+   brightness. The file itself is only lightly darkened. */
+.coverbg{position:absolute;inset:-18px -20px;z-index:-1;opacity:.92;
+  background-image:linear-gradient(180deg,
+      rgba(7,9,16,.10) 0%, rgba(7,9,16,.52) 24%, rgba(7,9,16,.66) 46%,
+      rgba(7,9,16,.58) 68%, rgba(7,9,16,.14) 100%), var(--shot);
+  background-size:cover,cover;background-position:center,center 38%;
+  -webkit-mask-image:linear-gradient(180deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  mask-image:linear-gradient(180deg, transparent 0%, #000 12%, #000 88%, transparent 100%)}
 .covercred{font-size:10px;color:rgba(150,166,205,.5);letter-spacing:.02em;margin-top:2px}
 .covercred a{color:rgba(150,166,205,.72);text-decoration:none;
   border-bottom:1px solid rgba(150,166,205,.22)}
 .cover h1{font-size:clamp(34px,6vw,84px);font-weight:700;letter-spacing:-.03em;line-height:.98}
 .cover h1 em{font-style:normal;color:var(--acc)}
-.cover p{max-width:56ch;color:var(--dim);font-size:clamp(13px,1.35vw,16px);line-height:1.6}
+.cover p{max-width:56ch;color:#c2cadb;font-size:clamp(13px,1.35vw,16px);line-height:1.6;
+  text-shadow:0 1px 14px rgba(7,9,16,.85)}
+.cover h1{text-shadow:0 2px 26px rgba(7,9,16,.7)}
+.cover .cstat .k{color:#a6b0c6}
 .cstat{display:flex;gap:28px;flex-wrap:wrap;justify-content:center;margin-top:6px}
 .cstat div{text-align:center}
 
@@ -1219,7 +1231,7 @@ function coverCard(){
   const games = D.teams.reduce((n,t) => n + t.games.filter(g => g.res && g.counts !== false).length, 0) / 2;
   return `<div class="in"><div class="cover">
     ${COVER_PHOTO ? `<div class="coverbg"
-      style="background-image:url('img/cover/${COVER_PHOTO.file}')"></div>` : ''}
+      style="--shot:url('img/cover/${COVER_PHOTO.file}')"></div>` : ''}
     <div class="kick">A Guy With A Scarf · Season Film</div>
     <h1>The NBA ${SEASON} season,<br><em>card by card</em></h1>
     <p>${SEASON}, read end to end: the ${players} leading scorers, the charts that rank
@@ -1338,7 +1350,7 @@ function playerCard(p){
                p.college, p.debut ? 'debut ' + p.debut : null].filter(Boolean).join(' · ');
   return `<div class="in">
     <div class="pgrid">
-      <div class="pleft">
+      <div class="pleft${p.shots ? '' : ' noshot'}">
         <div class="pmeta">
           <img src="${crest(p.team)}" alt="${esc(p.team)}" loading="lazy">
           <div style="min-width:0">
