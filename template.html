@@ -255,11 +255,17 @@ a{color:inherit}
 .arclab{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);
   margin-top:4px;font-variant-numeric:tabular-nums}
 
-.pobox{display:flex;flex-direction:column;gap:7px}
-.porow{display:grid;grid-template-columns:118px 42px 1fr;align-items:center;gap:9px;
-  font-size:12px}
+/* One grid for the whole box rather than one per row: `display:contents` on the rows
+   lets the four of them share columns, so the label column sizes to the longest round
+   ("Conference Finals Minnesota Timberwolves") while the scores still line up. A
+   per-row grid could only do that with a hard-coded width, which is what clipped
+   "Conference Fina..." before. */
+.pobox{display:grid;grid-template-columns:auto 42px 1fr;align-items:center;
+  column-gap:9px;row-gap:7px}
+.pobox>.k{grid-column:1/-1}
+.porow{display:contents;font-size:12px}
 .porow .rd{color:var(--dim);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  white-space:nowrap}
 .porow .sc{font-weight:700;font-variant-numeric:tabular-nums}
 .pogames{display:flex;gap:3px}
 .pog{width:15px;height:15px;border-radius:4px;display:grid;place-items:center;
@@ -1434,7 +1440,8 @@ function teamCard(t){
         (${t.po.w}-${t.po.l})</span></div>
       ${t.po.rounds.map(r => `<div class="porow">
         <span class="rd">${esc(r.round)}${r.opp ? ` <b style="font-weight:700;color:${
-          readable(winColor(TEAMS[r.opp] || {}), 4.5)}">${esc(r.opp)}</b>` : ''}</span>
+          readable(winColor(TEAMS[r.opp] || {}), 4.5)}">${esc(
+          (TEAMS[r.opp] || {}).name || r.opp)}</b>` : ''}</span>
         <span class="sc">${r.w}-${r.l}</span>
         <span class="pogames">${r.games.map(g =>
           `<i class="pog ${g.res === 'W' ? 'w' : 'l'}" title="${g.ha} ${g.us}-${g.them}">${g.res || ''}</i>`
