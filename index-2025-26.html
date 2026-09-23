@@ -122,6 +122,10 @@ a{color:inherit}
 /* Row label in a value slot: the playoff row mirrors row 1's columns, so the
    first cell names the row instead of carrying a number. */
 .v.potitle{font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+/* The playoff row is marked in gold, the same gold that foots the playoff bars on the
+   game chart, so the row and the chart read as one idea rather than two decorations. */
+.pobar{border-left:3px solid var(--gold);background:rgba(240,194,74,.045)}
+.pobar .potitle{color:var(--gold)}
 /* A shooting percentage gets a pie of itself beside the number, in the same red / blue /
    grey the points mix uses, so the three rates are comparable at a glance instead of
    being three numbers you have to hold in your head. */
@@ -215,10 +219,10 @@ a{color:inherit}
 /* His won-lost in the games he played, under the team name on the photo. */
 .jwl{display:block;margin-top:4px;font-size:12px;font-weight:700;letter-spacing:.06em;
   color:rgba(232,236,245,.66);font-variant-numeric:tabular-nums;pointer-events:auto}
-/* How that season ended, under the record. */
-.jpo{display:block;margin-top:2px;font-size:10px;font-weight:600;letter-spacing:.04em;
-  color:var(--dim);pointer-events:auto}
+/* How far they got, on the same line as the record. */
+.jpo{font-style:normal;font-weight:600;color:var(--dim)}
 .jpo.champ{color:var(--gold);font-weight:800}
+.jsep{font-style:normal;margin:0 5px;color:rgba(150,166,205,.45)}
 /* Outlined like a real jersey numeral: a soft fill with a brighter edge. Fill and edge
    need separate alphas, so the tint goes in the colours rather than on the element --
    an element opacity would dim both together. The plain rgba line is the fallback. */
@@ -1257,12 +1261,11 @@ function playerCard(p){
           <div class="jerseybox" style="--tc:${winColor(t)};color:${winColor(t)}">
             ${p.jersey ? `<b class="jerseyno">${esc(p.jersey)}</b>` : ''}
             <span class="jteam">${tlink(p.team, esc(t.name || p.team))}</span>
-            ${p.wl ? `<span class="jwl" title="${traded
+            ${(() => { const e = poEnding(t); return `<span class="jwl" title="${traded
                 ? `Record across both teams in the ${p.gp} games he played`
                 : `${esc(t.name || p.team)}'s record in the ${p.gp} games he played`}"
-              >${p.wl[0]}-${p.wl[1]}</span>` : ''}
-            ${(() => { const e = poEnding(t); return `<span class="jpo${e.champ ? ' champ' : ''}"
-              >${e.txt}</span>`; })()}</div>
+              >${p.wl ? `${p.wl[0]}-${p.wl[1]}<i class="jsep">·</i>` : ''}<i
+                class="jpo${e.champ ? ' champ' : ''}">${e.txt}</i></span>`; })()}</div>
           <img src="${head(p.id)}" alt="${esc(p.name)}" loading="lazy"
                onerror="this.style.display='none'">
         </div>
@@ -1291,7 +1294,7 @@ function playerCard(p){
             <div class="k" title="Best game of the season">Best${p.highs.opp
               ? ` ${p.highs.ha === 'H' ? 'vs' : '@'} ${esc(p.highs.opp)}` : ' night'}</div></div>
         </div></div>
-        ${p.po ? `<div class="box"><div class="kv">
+        ${p.po ? `<div class="box pobar"><div class="kv">
           <div><div class="v potitle">Playoffs</div></div>
           <div><div class="v">${p.po.ppg}${delta(p.po.ppg, p.ppg)}</div><div class="k">Points avg</div></div>
           <div><div class="v vg">${pie(p.po.wl ? p.po.wl[0] / (p.po.gp || 1) * 100 : 0, 'var(--win)')}<span>${p.po.gp}</span></div>
@@ -1378,15 +1381,18 @@ function ladderCard(){
 }
 
 /* A filled wedge, not a ring: at 20px a wedge reads as "a bit under half" far better. */
-/* How the player's team ended its season, for under the record on the photo.
-   Outcomes come from playoff_run(): CHAMPIONS, "Lost the NBA Finals",
-   "Lost the <round>", or nothing at all if they never made it. */
+/* How far the player's team got, named by the phase alone so it fits on the same
+   line as the record. Outcomes come from playoff_run(): CHAMPIONS,
+   "Lost the NBA Finals", "Lost the <round>", or nothing if they never made it. */
 function poEnding(t){
   const o = (t && t.po && t.po.outcome) || '';
-  if (!o) return {txt: 'Did not qualify', champ: false};
+  if (!o) return {txt: 'Not qualified', champ: false};
   if (o === 'CHAMPIONS') return {txt: 'Champions', champ: true};
-  if (/NBA Finals/.test(o)) return {txt: 'Lost the Finals', champ: false};
-  return {txt: o.replace(/^Lost the /, 'Out in the '), champ: false};
+  const phase = o.replace(/^(Lost|Won) the /, '')
+                 .replace(/^NBA Finals$/, 'Finals')
+                 .replace(/^Conference Finals$/, 'Conf Finals')
+                 .replace(/^1st Round$/, 'Round 1');
+  return {txt: phase, champ: false};
 }
 
 function pie(pct, colour){
