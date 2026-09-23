@@ -159,7 +159,11 @@ a{color:inherit}
 .pie{width:20px;height:20px;flex:0 0 auto;display:block}
 
 /* ---------- team card ---------- */
-.tgrid{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:37% 1fr;gap:14px}
+/* Identity and numbers left, the roster right, and the season arc as its own full-width
+   row beneath both -- 82 games in a 63% column made every wobble the same size. */
+.tgrid{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:37% 1fr;
+  grid-template-rows:minmax(0,1fr) auto;gap:14px}
+.tarc{grid-column:1 / -1;flex:0 0 auto}
 .tid{display:flex;flex-direction:column;gap:12px;min-height:0}
 .thead{display:flex;align-items:center;gap:14px}
 .crest{width:clamp(66px,7vw,96px);height:auto;aspect-ratio:1;flex:0 0 auto;
@@ -1428,6 +1432,14 @@ function teamCard(t){
             <div><div class="v">${t.streak.W}</div><div class="k">Best run</div></div>
             <div><div class="v">${t.streak.L}</div><div class="k">Worst run</div></div>
           </div></div>
+          ${(t.best && t.worst) ? `<div class="box"><div class="kv" style="grid-template-columns:1fr 1fr">
+            <div><div class="v" style="font-size:15px">${t.best.us}-${t.best.them}
+              <small>v ${tlink(t.best.opp, esc(t.best.opp))}</small></div>
+              <div class="k">Biggest win · ${t.best.date}</div></div>
+            <div><div class="v" style="font-size:15px">${t.worst.us}-${t.worst.them}
+              <small>v ${tlink(t.worst.opp, esc(t.worst.opp))}</small></div>
+              <div class="k">Heaviest defeat · ${t.worst.date}</div></div>
+          </div></div>` : ''}
           ${po}
           ${(cup || intl.length) ? `<div class="box"><div class="k">Also this season</div>
             <div style="font-size:11.5px;line-height:1.6;margin-top:4px">
@@ -1438,20 +1450,10 @@ function teamCard(t){
             </div></div>` : ''}
         </div>
       </div>
-      <div class="tright">
-        <div class="panel arcwrap">
-          <div class="kick" style="margin-bottom:8px">The season arc — games above .500</div>
-          ${arcSvg(t)}
-        </div>
-        ${(t.best && t.worst) ? `<div class="box"><div class="kv" style="grid-template-columns:1fr 1fr">
-          <div><div class="v" style="font-size:15px">${t.best.us}-${t.best.them}
-            <small>v ${tlink(t.best.opp, esc(t.best.opp))}</small></div>
-            <div class="k">Biggest win · ${t.best.date}</div></div>
-          <div><div class="v" style="font-size:15px">${t.worst.us}-${t.worst.them}
-            <small>v ${tlink(t.worst.opp, esc(t.worst.opp))}</small></div>
-            <div class="k">Heaviest defeat · ${t.worst.date}</div></div>
-        </div></div>` : ''}
-        ${roster}
+      <div class="tright">${roster}</div>
+      <div class="panel arcwrap tarc">
+        <div class="kick" style="margin-bottom:8px">The season arc — games above .500</div>
+        ${arcSvg(t)}
       </div>
     </div>
   </div>`;
