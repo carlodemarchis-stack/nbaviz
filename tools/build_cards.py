@@ -362,7 +362,7 @@ def main(label):
 
     # --- players
     out_players = []
-    for p in deck[:PLAYER_CARDS]:
+    def player_record(p, with_shots=True):
         rs = p["rs"]
         log = sorted(plog.get(p["id"], []))
         pts_log = [x[1] for x in log]
@@ -390,7 +390,7 @@ def main(label):
                 powl[1] += 1
         tix = {t["t"]: i for i, t in enumerate(p["teams"])}
         game_log = [[tix.get(x[6], 0), x[7], x[5], x[2], x[3], x[4], x[8]] for x in log]
-        out_players.append({
+        return {
             "rank": p["rank"], "id": p["id"], "nbaId": p["nbaId"],
             "name": p["name"], "short": p["short"], "team": p["team"],
             "teams": p["teams"], "pos": p["pos"], "age": p["age"],
@@ -416,7 +416,7 @@ def main(label):
                       # Who the best night came against. Ties go to the earliest such
                       # game -- log is already in date order, so max() keeps the first.
                       **best_night(log, sched)},
-            "shots": shot.get(p["id"]),
+            "shots": shot.get(p["id"]) if with_shots else None,
             "po": ({"gp": int(p["po"].get("gamesPlayed", 0)),
                     "ppg": r1(p["po"].get("avgPoints", 0)),
                     "mpg": r1(p["po"].get("avgMinutes", 0)),
@@ -435,7 +435,25 @@ def main(label):
                        for g in sorted(pologs[p["id"]])] or None),
             "poMiss": (team_run_label(po.get(p.get("team"))) 
                        if not p.get("po") and po.get(p.get("team")) else None),
-        })
+        }
+
+    for p in deck[:PLAYER_CARDS]:
+        out_players.append(player_record(p))
+
+    # --- the tail: everyone who played but is outside the carded 100.
+    # These do NOT join the film -- the deck stays at its 135 cards -- they are fetched
+    # per team when a roster row is clicked, so the page weight and the node count are
+    # untouched. One file per team rather than one bundle: a 21 KB fetch scoped to the
+    # team already on screen beats a 640 KB fetch on the first click anywhere.
+    carded = {p["id"] for p in deck[:PLAYER_CARDS]}
+    by_id = {p["id"]: p for p in deck}
+    tails, rows = {}, 0
+    for t in out_teams:
+        ids = [r["id"] for r in t["roster"] if r["id"] not in carded and r["id"] in by_id]
+        rows += len(ids)
+        if ids:
+            tails[t["abbr"]] = {by_id[i]["id"]: player_record(by_id[i], with_shots=False)
+                                for i in ids}
 
     champ = next((t["abbr"] for t in out_teams if t["po"] and t["po"]["outcome"] == "CHAMPIONS"), None)
 
@@ -456,6 +474,23 @@ def main(label):
     p = os.path.join(DATA, f"cards-{label}.json")
     with open(p, "w") as f:
         json.dump(payload, f, separators=(",", ":"), ensure_ascii=False)
+
+    rdir = os.path.join(DATA, "roster")
+    os.makedirs(rdir, exist_ok=True)
+    for old_f in os.listdir(rdir):
+        if old_f.startswith(f"{label}-"):
+            os.remove(os.path.join(rdir, old_f))
+    tot = 0
+    for ab, players in tails.items():
+        rp = os.path.join(rdir, f"{label}-{ab}.json")
+        with open(rp, "w") as f:
+            json.dump(players, f, separators=(",", ":"), ensure_ascii=False)
+        tot += os.path.getsize(rp)
+    if tails:
+        sizes = [os.path.getsize(os.path.join(rdir, f"{label}-{ab}.json")) for ab in tails]
+        print(f"  roster files: {len(tails)} teams, {sum(len(v) for v in tails.values())} "
+              f"players over {rows} rows, {min(sizes)/1024:.0f}-{max(sizes)/1024:.0f} KB "
+              f"each, {tot/1024:.0f} KB total")
 
     print(f"  {len(out_teams)} team cards, {len(out_players)} player cards "
           f"(pool {len(deck)})")

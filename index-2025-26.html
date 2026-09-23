@@ -413,8 +413,17 @@ a{color:inherit}
 .dot{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:4px}
 
 /* ---------- cover + charts ---------- */
-.cover{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;gap:16px;
-  text-align:center;align-items:center}
+.cover{position:relative;flex:1 1 auto;display:flex;flex-direction:column;
+  justify-content:center;gap:16px;text-align:center;align-items:center}
+/* Madison Square Garden behind the title. Already darkened in the file; the gradient
+   on top pins the centre darker still so the display type never fights the crowd. */
+.coverbg{position:absolute;inset:-18px -20px;z-index:-1;background-size:cover;
+  background-position:center 38%;opacity:.55;
+  -webkit-mask-image:radial-gradient(120% 90% at 50% 45%, transparent 8%, #000 72%);
+  mask-image:radial-gradient(120% 90% at 50% 45%, transparent 8%, #000 72%)}
+.covercred{font-size:10px;color:rgba(150,166,205,.5);letter-spacing:.02em;margin-top:2px}
+.covercred a{color:rgba(150,166,205,.72);text-decoration:none;
+  border-bottom:1px solid rgba(150,166,205,.22)}
 .cover h1{font-size:clamp(34px,6vw,84px);font-weight:700;letter-spacing:-.03em;line-height:.98}
 .cover h1 em{font-style:normal;color:var(--acc)}
 .cover p{max-width:56ch;color:var(--dim);font-size:clamp(13px,1.35vw,16px);line-height:1.6}
@@ -443,6 +452,18 @@ a{color:inherit}
 .mod{position:fixed;inset:0;z-index:60;background:rgba(4,6,12,.82);
   backdrop-filter:blur(7px);display:none;place-items:center;padding:22px}
 .mod.on{display:grid}
+/* The overlay is a card, so it gets a card's shape rather than the prose box the other
+   modals use. Height is capped to the viewport because playerCard() expects to fill one. */
+.pbox{position:relative;width:min(1520px,96vw);height:min(86vh,900px);background:#0b0e16;
+  border:1px solid var(--line);border-radius:20px;padding:16px 18px}
+.pbox #pbody{height:100%}
+.pclose{position:absolute;top:-13px;right:-9px;z-index:2;width:30px;height:30px;
+  border-radius:50%;border:1px solid var(--line);background:#161a26;color:var(--ink);
+  font-size:17px;line-height:1;cursor:pointer}
+.pclose:hover{background:#222836}
+/* A roster row that leads somewhere says so on hover, like any other cross-link. */
+.rrow .xl{border-bottom:none}
+.rrow:hover .xl{border-bottom:1px dotted currentColor}
 .mbox{width:min(720px,94vw);max-height:84vh;overflow:auto;background:#0d1019;
   border:1px solid var(--line);border-radius:20px;padding:22px 24px}
 .mbox h3{font-size:17px;font-weight:700;margin-bottom:12px}
@@ -576,6 +597,14 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
       <kbd>f</kbd> fullscreen · <kbd>h</kbd> help · <kbd>Esc</kbd> close.
       Swipe on a touch screen.</p>
   </div>
+</div>
+
+<!-- A player outside the carded 100, opened from a roster row. His record is fetched
+     from his team's own roster file the first time one is asked for, then cached, so the
+     film's deck and page weight are untouched. Rendered by playerCard() verbatim. -->
+<div class="mod" id="pmodal" onclick="if(event.target===this)closeMods()">
+  <div class="pbox"><button class="pclose" onclick="closeMods()" title="Close (Esc)">×</button>
+    <div id="pbody"></div></div>
 </div>
 
 <div class="mod" id="cmodal" onclick="if(event.target===this)closeMods()">
@@ -1168,13 +1197,31 @@ function mixBar(p){
 
 /* ---------- card renderers ---------- */
 
+/* The cover photo and the credit its licence requires, together in one place so the
+   attribution cannot drift away from the file it belongs to. CC BY-SA: the darkened,
+   cropped version on the cover is a derivative and carries the same licence. */
+const COVER_PHOTOS = {
+  '2025-26': {
+    file: 'msg-2025-26.jpg',
+    credit: 'Tzim78',
+    licence: 'CC BY-SA 4.0',
+    licenceUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+    page: 'https://commons.wikimedia.org/wiki/File:New_York_Knicks_vs._San_Antonio_Spurs,_Round_4,_Game_2,_June_5,_MSG_Finals_Watch_Party_Full_Arena.jpg',
+  },
+};
+// Keyed by season on purpose: a photo of one season's arena must never end up behind
+// another season's cover. A season with no photo simply gets the plain background.
+const COVER_PHOTO = COVER_PHOTOS[SEASON] || null;
+
 function coverCard(){
   const champ = TEAMS[D.champion];
   const teams = D.teams.length, players = D.players.length;
   const games = D.teams.reduce((n,t) => n + t.games.filter(g => g.res && g.counts !== false).length, 0) / 2;
   return `<div class="in"><div class="cover">
+    ${COVER_PHOTO ? `<div class="coverbg"
+      style="background-image:url('img/cover/${COVER_PHOTO.file}')"></div>` : ''}
     <div class="kick">A Guy With A Scarf · Season Film</div>
-    <h1>The NBA season,<br><em>card by card</em></h1>
+    <h1>The NBA ${SEASON} season,<br><em>card by card</em></h1>
     <p>${SEASON}, read end to end: the ${players} leading scorers, the charts that rank
       them, then every franchise in order of record and the ladder they finished on.
       ${champ ? `<b>${tlink(champ.abbr, esc(champ.name))}</b> finished it as champions.` : ''}</p>
@@ -1185,6 +1232,11 @@ function coverCard(){
       <div><div class="v">${CARDS.length}</div><div class="k">Cards in all</div></div>
     </div>
     <p style="font-size:12px;margin-top:4px">Press <kbd>→</kbd> or swipe to begin.</p>
+    ${COVER_PHOTO ? `<div class="covercred">Photo: ${COVER_PHOTO.credit} ·
+      <a href="${COVER_PHOTO.licenceUrl}" target="_blank" rel="noopener noreferrer"
+        >${COVER_PHOTO.licence}</a> via
+      <a href="${COVER_PHOTO.page}" target="_blank" rel="noopener noreferrer"
+        >Wikimedia Commons</a></div>` : ''}
   </div></div>`;
 }
 
@@ -1213,7 +1265,11 @@ function teamCard(t){
         <span class="n">AST<i>avg</i></span></div>
       <div class="rgrid">${t.roster.map(r => {
         const nm = NAMES[r.id] || ['—',''];
-        return `<div class="rrow"><span class="nm">${plink(r.id, esc(nm[0]))}<i>${esc(nm[1])}</i></span>
+        const who = CARD_OF_PLAYER[r.id] != null
+          ? plink(r.id, esc(nm[0]))
+          : `<a class="xl" href="#" onclick="openRoster('${t.abbr}','${r.id}');return false"
+              >${esc(nm[0])}</a>`;
+        return `<div class="rrow"><span class="nm">${who}<i>${esc(nm[1])}</i></span>
           <span class="n">${r.g}</span><span class="n">${r.ppg}</span>
           <span class="n">${r.rpg}</span><span class="n">${r.apg}</span></div>`;
       }).join('')}</div></div>` : '';
@@ -1879,6 +1935,34 @@ function fs(){
   document.fullscreenElement ? document.exitFullscreen()
     : document.documentElement.requestFullscreen().catch(()=>{});
 }
+/* One file per team, fetched the first time a roster row on that team is opened and kept
+   for the session. Per team rather than one bundle: a ~20 KB fetch scoped to the card
+   already on screen beats a 700 KB fetch on the first click anywhere. */
+const ROSTER = {};
+async function rosterOf(ab){
+  if (!ROSTER[ab]) ROSTER[ab] = fetch(`data/roster/${SEASON}-${ab}.json`)
+    .then(r => r.ok ? r.json() : Promise.reject(r.status));
+  return ROSTER[ab];
+}
+async function openRoster(ab, id){
+  const body = document.getElementById('pbody');
+  body.innerHTML = '<div class="in"><p style="color:var(--dim)">Loading…</p></div>';
+  openMod('pmodal');
+  try {
+    const p = (await rosterOf(ab))[id];
+    if (!p) throw 'missing';
+    body.innerHTML = playerCard(p);
+  } catch(e) {
+    // Opened from a file:// URL a fetch is blocked outright, so say what happened
+    // rather than leaving a spinner that never resolves.
+    body.innerHTML = `<div class="in"><h2 style="font-size:20px;font-weight:700">
+      ${esc((NAMES[id] || ['this player'])[0])}</h2>
+      <p style="font-size:12px;color:var(--dim);max-width:60ch">His card could not be
+      loaded. Cards outside the top 100 are fetched on demand, which needs the page to be
+      served over http — opened straight from disk, the browser blocks it.</p></div>`;
+  }
+}
+
 function openMod(id){ closeMods(); document.getElementById(id).classList.add('on'); }
 function closeMods(){ document.querySelectorAll('.mod').forEach(m => m.classList.remove('on')); }
 
