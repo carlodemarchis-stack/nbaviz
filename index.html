@@ -114,6 +114,9 @@ a{color:inherit}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .v{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25}
 .v small{font-size:11px;font-weight:300;color:var(--dim)}
+/* A shooting rate is tinted to its pie, so the sign goes with the number rather than
+   staying grey and splitting the figure in two. */
+.v.vg small{color:inherit;opacity:.6}
 /* His best single game for that stat, beside the average it is the peak of.
    Regular season only -- a six-game playoff max is a different kind of number. */
 .v small.mx{font-size:10px;font-weight:600;letter-spacing:.02em;margin-left:6px;
@@ -740,6 +743,25 @@ try {
 const crest = ab => `img/crest/${ab}.svg`;
 /* Brooklyn and San Antonio are #000000, invisible as a line colour; prefer a clearly
    brighter secondary. Mirrors winColor() on the towers page. */
+/* winColor() guarantees a brightness floor, NOT a contrast ratio -- the lifted blues and
+   purples (SAC, PHI, NY, DET) still land near 2:1 on this background, which is illegible
+   at label size. Blend toward white until the ratio clears, keeping the hue. */
+function readable(c, min){
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(c)
+         || /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(c);
+  if (!m) return c;                                   // var(--acc) and friends: leave be
+  const hex = c[0] === '#' || /^[0-9a-f]{6}$/i.test(c);
+  let rgb = m.slice(1, 4).map(v => hex ? parseInt(v, 16) : +v);
+  const rel = ([r, g, b]) => {
+    const f = v => (v /= 255) <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+  };
+  const BG = rel([9, 11, 18]);
+  for (let i = 0; i < 20 && (rel(rgb) + 0.05) / (BG + 0.05) < min; i++)
+    rgb = rgb.map(v => Math.round(v + (255 - v) * 0.12));
+  return `rgb(${rgb.join(',')})`;
+}
+
 function lum(hex){
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return null;
   const n = parseInt(m[1], 16);
@@ -1489,17 +1511,19 @@ function playerCard(p){
             <div class="k">Assists avg</div></div>
         </div></div>
         <div class="box"><div class="kv">
-          <div><div class="v vg">${pie(p.fg,'var(--two)')}<span>${p.fg}<small>%</small></span></div>
+          <div><div class="v vg">${pie(p.fg,'var(--two)')}<span style="color:var(--two)">${p.fg}<small>%</small></span></div>
             <div class="k">Field goals</div></div>
-          <div><div class="v vg">${pie(p.tp,'var(--three)')}<span>${p.tp}<small>%</small></span></div>
+          <div><div class="v vg">${pie(p.tp,'var(--three)')}<span style="color:var(--three)">${p.tp}<small>%</small></span></div>
             <div class="k">Three point</div></div>
-          <div><div class="v vg">${pie(p.ft,'var(--ft)')}<span>${p.ft}<small>%</small></span></div>
+          <div><div class="v vg">${pie(p.ft,'var(--ft)')}<span style="color:var(--ft)">${p.ft}<small>%</small></span></div>
             <div class="k">Free throws</div></div>
           <div><div class="v">${p.dd}</div><div class="k">Double-doubles</div></div>
           <div><div class="v">${p.td}</div><div class="k">Triple-doubles</div></div>
           <div><div class="v">${p.highs.pts}</div>
             <div class="k" title="Best game of the season">Best${p.highs.opp
-              ? ` ${p.highs.ha === 'H' ? 'vs' : '@'} ${esc(p.highs.opp)}` : ' night'}</div></div>
+              ? ` ${p.highs.ha === 'H' ? 'vs' : '@'} <b style="font-weight:700;color:${
+                  readable(winColor(TEAMS[p.highs.opp] || {}), 4.5)}">${esc(p.highs.opp)}</b>`
+              : ' night'}</div></div>
         </div></div>
         </div>
         ${p.po ? `<div class="box pobar"><div class="kv">
