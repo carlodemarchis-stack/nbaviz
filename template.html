@@ -162,8 +162,14 @@ a{color:inherit}
 /* Identity and numbers left, the roster right, and the season arc as its own full-width
    row beneath both -- 82 games in a 63% column made every wobble the same size. */
 .tgrid{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:37% 1fr;
-  grid-template-rows:minmax(0,1fr) auto;gap:14px}
-.tarc{grid-column:1 / -1;flex:0 0 auto}
+  grid-template-rows:auto minmax(0,1fr);gap:14px}
+/* Row 1 takes what the identity and the roster actually need; the arc takes everything
+   left over rather than stopping at its own 164px cap, so a full-width chart is not also
+   a short one. The SCALE stays shared across all 30 -- a taller box shows the same shape
+   bigger, it does not rescale it. */
+.tarc{grid-column:1 / -1;min-height:0;display:flex;flex-direction:column}
+.tarc .arcbox{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.tarc .arc{flex:1 1 auto;min-height:0;height:auto}
 .tid{display:flex;flex-direction:column;gap:12px;min-height:0}
 .thead{display:flex;align-items:center;gap:14px}
 .crest{width:clamp(66px,7vw,96px);height:auto;aspect-ratio:1;flex:0 0 auto;
@@ -1398,7 +1404,8 @@ function teamCard(t){
       <div class="k">Playoffs — ${esc(t.po.outcome)} <span style="color:var(--dim)">
         (${t.po.w}-${t.po.l})</span></div>
       ${t.po.rounds.map(r => `<div class="porow">
-        <span class="rd">${esc(r.round)}</span>
+        <span class="rd">${esc(r.round)}${r.opp ? ` <b style="font-weight:700;color:${
+          readable(winColor(TEAMS[r.opp] || {}), 4.5)}">${esc(r.opp)}</b>` : ''}</span>
         <span class="sc">${r.w}-${r.l}</span>
         <span class="pogames">${r.games.map(g =>
           `<i class="pog ${g.res === 'W' ? 'w' : 'l'}" title="${g.ha} ${g.us}-${g.them}">${g.res || ''}</i>`
