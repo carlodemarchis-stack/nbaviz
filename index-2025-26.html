@@ -311,8 +311,10 @@ a{color:inherit}
   transition:background .12s,border-color .12s}
 .jerseybox:hover .jteam{background:rgba(7,9,16,.88);color:#fff;
   border-color:var(--tc)}
-/* Inside the chip the dotted rule is noise -- the chip itself is the affordance. */
-.jteam .xl{border-bottom:none}
+/* The chip alone did not read as clickable -- it looks like a badge. Give the name the
+   same dotted rule every other cross-link carries, and let the whole chip light up. */
+.jteam .xl{border-bottom:1px dotted rgba(232,236,245,.45)}
+.jerseybox:hover .jteam .xl{border-bottom-color:currentColor}
 .rankno{position:absolute;top:8px;left:13px;pointer-events:none}
 .rankno b{display:block;font-weight:700;line-height:.82;color:rgba(232,236,245,.13);
   font-variant-numeric:tabular-nums;letter-spacing:-.03em;font-size:clamp(26px,3.7vw,52px)}
@@ -1718,7 +1720,7 @@ const APPS = [
   ['NFL','Wins up, losses down','#4d94e0','https://nfl.aguywithascarf.com'],
   ['World Cup','Road to the Final','#3fbe72','https://worldcupbracket.aguywithascarf.com'],
   ['PGA TOUR','Season Film','#57a34a','https://golf.aguywithascarf.com'],
-  ['Athletics','World Record Film','#d98a3d','https://athletics.aguywithascarf.com'],
+  ['Athletics','World Record Film','#d98a3d','https://athletics.aguywithascarf.com']
 ];
 document.getElementById('applist').innerHTML = APPS.map(a =>
   `<a class="approw" href="${a[3]}" target="_blank" rel="noopener">

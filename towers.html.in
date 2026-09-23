@@ -524,7 +524,7 @@ const APPS = [
   ['NFL','Wins up, losses down','#4d94e0','https://nfl.aguywithascarf.com'],
   ['World Cup','Road to the Final','#3fbe72','https://worldcupbracket.aguywithascarf.com'],
   ['PGA TOUR','Season Film','#57a34a','https://golf.aguywithascarf.com'],
-  ['Athletics','World Record Film','#d98a3d','https://athletics.aguywithascarf.com'],
+  ['Athletics','World Record Film','#d98a3d','https://athletics.aguywithascarf.com']
 ];
 document.getElementById('applist').innerHTML = APPS.map(a =>
   `<a class="approw" href="${a[3]}" target="_blank" rel="noopener">
