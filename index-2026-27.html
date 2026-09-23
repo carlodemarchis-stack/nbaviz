@@ -290,22 +290,28 @@ a{color:inherit}
   object-fit:cover;object-position:top center}
 /* The averages ride on the photo as translucent pills. A scrim under them, because a
    pale jersey would otherwise swallow the numbers. */
-/* Left-aligned rectangles stacked at the foot of the photo, rather than three centred
-   pills spread across it -- the numbers line up on one edge, so the eye reads down the
-   column instead of hunting across each tile. */
-.pmpills{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;
-  flex-direction:column;align-items:flex-start;gap:2px;padding:14px 5px 5px;
+/* Three boxes across the foot of the photo, each naming its own stat -- stacked up the
+   left they read as a list of unlabelled numbers, and only the first one said what it
+   was. */
+.pmpills{position:absolute;left:0;right:0;bottom:0;z-index:2;display:grid;
+  grid-template-columns:repeat(3,1fr);gap:3px;padding:16px 5px 5px;
   background:linear-gradient(180deg,transparent,rgba(7,9,16,.78) 58%)}
-.pmpills b{display:block;min-width:30px;padding:1px 5px;font-size:10px;font-weight:700;
-  text-align:left;line-height:1.3;border-radius:4px;background:rgba(7,9,16,.6);
+.pmpills b{padding:2px 2px 3px;font-size:10.5px;font-weight:700;text-align:center;
+  line-height:1.05;border-radius:4px;background:rgba(7,9,16,.62);
   border:1px solid rgba(255,255,255,.14);color:var(--ink);
   font-variant-numeric:tabular-nums;backdrop-filter:blur(3px)}
-.pmpills b:first-child{background:rgba(7,9,16,.72);border-color:var(--tc);color:#fff}
-/* Points carries its unit on a second line; rebounds and assists are read off their
-   position beside it, which is how a box score is read anyway. */
-.pmpills b.pmpts{line-height:1.1;padding:1px 5px 2px}
-.pmpills b.pmpts i{display:block;font-style:normal;font-size:6px;font-weight:700;
-  letter-spacing:.12em;text-transform:uppercase;opacity:.62}
+.pmpills b:first-child{background:rgba(7,9,16,.74);border-color:var(--tc);color:#fff}
+.pmpills b i{display:block;margin-top:1px;font-style:normal;font-size:5.5px;
+  font-weight:700;letter-spacing:.11em;text-transform:uppercase;opacity:.6}
+/* The season total sits opposite the jersey, top left -- the one number on the tile that
+   is a season rather than a rate. */
+.pmtot{position:absolute;top:4px;left:5px;z-index:1;padding:2px 5px 3px;border-radius:4px;
+  background:rgba(7,9,16,.55);border:1px solid rgba(255,255,255,.12);
+  font-size:10px;font-weight:700;line-height:1.05;color:var(--ink);text-align:center;
+  font-variant-numeric:tabular-nums;backdrop-filter:blur(3px)}
+.pmtot i{display:block;margin-top:1px;font-style:normal;font-size:5.5px;font-weight:700;
+  letter-spacing:.11em;text-transform:uppercase;opacity:.55}
+
 /* The jersey is back as a watermark on the photo as well as beside the name -- big and
    faint behind the player, small and factual under him. */
 .pmwm{position:absolute;top:0;right:5px;z-index:1;font-size:34px;font-weight:800;
@@ -1456,8 +1462,9 @@ function teamCard(t){
           <span class="pmshot"><i class="pmfb">${ini}</i><img src="${head(r.id)}" alt=""
             loading="lazy" onerror="this.style.display='none'">${nm[2]
               ? `<b class="pmwm">${esc(nm[2])}</b>` : ''}
-            <span class="pmpills"><b class="pmpts">${r.ppg}<i>pts</i></b
-              ><b>${r.rpg}</b><b>${r.apg}</b></span></span>
+            <b class="pmtot">${r.pts.toLocaleString('en-US')}<i>total</i></b>
+            <span class="pmpills"><b>${r.ppg}<i>pts</i></b
+              ><b>${r.rpg}<i>reb</i></b><b>${r.apg}<i>ast</i></b></span></span>
           <span class="pmname"><span>${esc(nm[0])}</span>${nm[2]
             ? `<b class="pmno">${esc(nm[2])}</b>` : ''}</span>
         </a>`;
