@@ -875,7 +875,7 @@ function logSvg(p, m){
   if (!L.length) return '';
   // The playoff run is the end of the same season's story, so it goes on the same
   // timeline and the same scale rather than in a parallel view.
-  const {CAL, PO, SEASON, SLOTS} = slotsOf(p);
+  const {CAL, PO, SEASON, GAP, SLOTS} = slotsOf(p);
   if (!SLOTS.length) return '';
   const CAP = SCALE[m] || (SCALE[m] = M.scale());
   const W = 1000, H = 150;
@@ -963,6 +963,14 @@ function logSvg(p, m){
     return seg;
   }).join('');
 
+  // Where the playoffs begin: drawn down the middle of the blank columns that separate
+  // the two halves, in the same gold that foots the playoff bars.
+  const poX = (PO.length && SEASON.length) ? (SEASON.length + GAP / 2) * bw : null;
+  const poDiv = poX === null ? '' :
+    `<line x1="${poX.toFixed(2)}" y1="0" x2="${poX.toFixed(2)}" y2="${H}"
+      stroke="var(--gold)" stroke-width="1" stroke-dasharray="4 3" opacity=".5"
+      vector-effect="non-scaling-stroke"/>`;
+
   let grid = '';
   for (let v = M.step; v < CAP; v += M.step){
     grid += `<line x1="0" y1="${y(v).toFixed(1)}" x2="${W}" y2="${y(v).toFixed(1)}"
@@ -1021,7 +1029,7 @@ function logSvg(p, m){
 
   return `<div class="arcbox loghook">${labels}<span class="wlwrap">${wl}</span>
   <svg class="log" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-    ${grid}<rect class="loghl" x="0" y="0" width="0" height="${H}"
+    ${grid}${poDiv}<rect class="loghl" x="0" y="0" width="0" height="${H}"
       fill="rgba(255,255,255,.13)" pointer-events="none"/>${bars}
     <line x1="0" y1="${y(avg).toFixed(1)}" x2="${W}" y2="${y(avg).toFixed(1)}"
       stroke="rgba(232,236,245,.6)" stroke-width="1.1" stroke-dasharray="5 4"
