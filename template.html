@@ -124,8 +124,19 @@ a{color:inherit}
 .v.potitle{font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 /* The playoff row is marked in gold, the same gold that foots the playoff bars on the
    game chart, so the row and the chart read as one idea rather than two decorations. */
-.pobar{border-left:3px solid var(--gold);background:rgba(240,194,74,.045)}
+.pobar{position:relative;background:rgba(240,194,74,.045)}
+/* A straight inset bar, not border-left: the box is 14px-rounded, so a left border
+   bends into a bracket at both ends. Inset past the corner radius, it stays a rule. */
+.pobar::before{content:'';position:absolute;left:0;top:13px;bottom:13px;width:3px;
+  border-radius:2px;background:var(--gold)}
 .pobar .potitle{color:var(--gold)}
+/* The regular-season rows carry the same rule in the team's colour, so the card reads
+   as two blocks -- his season, then his playoffs -- rather than three loose panels. */
+.rsbar{position:relative}
+.rsbar::before{content:'';position:absolute;left:0;top:13px;bottom:13px;width:3px;
+  border-radius:2px;background:var(--tc,var(--acc));opacity:.85}
+.rskick{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
+  margin-bottom:7px}
 /* A shooting percentage gets a pie of itself beside the number, in the same red / blue /
    grey the points mix uses, so the three rates are comparable at a glance instead of
    being three numbers you have to hold in your head. */
@@ -1272,7 +1283,8 @@ function playerCard(p){
         ${shotChart(p)}
       </div>
       <div class="pright">
-        <div class="box"><div class="kv">
+        <div class="box rsbar" style="--tc:${winColor(t)}">
+          <div class="rskick">Regular season</div><div class="kv">
           <div><div class="v">${p.pts}</div><div class="k">Points — no. ${p.rank}</div></div>
           <div><div class="v">${p.ppg}</div><div class="k">Points avg</div></div>
           <div><div class="v vg">${pie(p.wl ? p.wl[0] / (p.gp || 1) * 100 : 0, 'var(--win)')}<span>${p.gp}</span></div>
@@ -1281,7 +1293,7 @@ function playerCard(p){
           <div><div class="v">${p.rpg}</div><div class="k">Rebounds avg</div></div>
           <div><div class="v">${p.apg}</div><div class="k">Assists avg</div></div>
         </div></div>
-        <div class="box"><div class="kv">
+        <div class="box rsbar" style="--tc:${winColor(t)}"><div class="kv">
           <div><div class="v vg">${pie(p.fg,'var(--two)')}<span>${p.fg}<small>%</small></span></div>
             <div class="k">Field goals</div></div>
           <div><div class="v vg">${pie(p.tp,'var(--three)')}<span>${p.tp}<small>%</small></span></div>
