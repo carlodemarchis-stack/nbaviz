@@ -272,8 +272,12 @@ def main(label):
                 a[3] += ast
                 a[4] += mins
                 a[5] += tpm
+                # How many of points / rebounds / assists / steals / blocks reached 10.
+                # 3+ is a triple-double, 2+ a double-double -- and ESPN counts a triple
+                # as a double too, which is what makes these tally to its season figures.
+                cats = sum(1 for v in (pts, reb, ast, r[12], r[13]) if v >= 10)
                 plog[pid].append((date_of.get(gid, ""), pts, reb, ast, tpm, mins,
-                                  ab, gidx.get((ab, gid), -1), ftm))
+                                  ab, gidx.get((ab, gid), -1), ftm, cats))
 
     # --- playoff per-game lines, tagged with the round they belong to.
     # Kept apart from plog: these games are not in a team's `games` list, so they carry
@@ -297,8 +301,9 @@ def main(label):
                 pid, mins, pts, fgm, fga, tpm, tpa, ftm, fta, reb, ast = r[:11]
                 if not mins:                       # did not play: no bar
                     continue
+                pocats = sum(1 for v in (pts, reb, ast, r[12], r[13]) if v >= 10)
                 pologs[pid].append((date, ri, pts, tpm, ftm, mins, reb, ast,
-                                    opp, us, them, res))
+                                    opp, us, them, res, pocats))
 
     # --- teams
     out_teams = []
@@ -370,7 +375,7 @@ def main(label):
         # than copy those onto every game (7,000 of them), each entry points at the row
         # in that team's own games list, which the payload already ships:
         #   [index into p["teams"], index into that team's games, min, reb, ast,
-        #    threes made, free throws made]
+        #    threes made, free throws made, 3 if a triple-double / 2 if a double-double]
         # The last two are what colours the game chart: threes*3 and free throws come
         # straight out, and everything left over came from twos.
         # His team's record IN THE GAMES HE PLAYED -- not the team's season record.
@@ -389,7 +394,8 @@ def main(label):
             elif g[11] == "L":
                 powl[1] += 1
         tix = {t["t"]: i for i, t in enumerate(p["teams"])}
-        game_log = [[tix.get(x[6], 0), x[7], x[5], x[2], x[3], x[4], x[8]] for x in log]
+        game_log = [[tix.get(x[6], 0), x[7], x[5], x[2], x[3], x[4], x[8],
+                     3 if x[9] >= 3 else 2 if x[9] >= 2 else 0] for x in log]
         return {
             "rank": p["rank"], "id": p["id"], "nbaId": p["nbaId"],
             "name": p["name"], "short": p["short"], "team": p["team"],
@@ -430,8 +436,9 @@ def main(label):
             # Playoff games on the same timeline as the season, after a divider.
             # [pts, threes made, free throws made, minutes, rebounds, assists,
             #  round index, W/L, opponent, us, them] -- round index keys the labels.
+            # [pts, 3pm, ftm, min, reb, ast, round, W/L, opp, us, them, dbl]
             "polog": ([[g[2], g[3], g[4], g[5], g[6], g[7], g[1], g[11],
-                        g[8], g[9], g[10]]
+                        g[8], g[9], g[10], 3 if g[12] >= 3 else 2 if g[12] >= 2 else 0]
                        for g in sorted(pologs[p["id"]])] or None),
             "poMiss": (team_run_label(po.get(p.get("team"))) 
                        if not p.get("po") and po.get(p.get("team")) else None),
@@ -460,7 +467,11 @@ def main(label):
     # Team-card rosters reference players by id; ship a lookup so they can show names
     # without carrying a full player object per roster row. Whole pool, not just the
     # carded 60, because a roster row can be anyone who played.
-    names = {p["id"]: [p["name"], p["pos"] or "", p["jersey"] or ""] for p in deck}
+    # The number he wore in THIS season, from the box scores -- not ESPN's athlete record,
+    # which serves the number he wears now and none at all for anyone unsigned. The carded
+    # 100 already went through jersey_of(); the roster tiles show the other 478, so they
+    # need it too or a third of the league is labelled with next season's number.
+    names = {p["id"]: [p["name"], p["pos"] or "", jersey_of(p, worn) or ""] for p in deck}
 
     nights = big_nights(sched, box, uncounted, deck)
 
@@ -533,6 +544,12 @@ def main(label):
           if drift else
           f"  ok: all {sum(len(x['glog']) for x in out_players)} game-log pointers "
           f"resolve to the right night")
+
+    dbl = [(x["name"], sum(1 for g in x["glog"] if g[7] >= 2), x["dd"],
+            sum(1 for g in x["glog"] if g[7] == 3), x["td"]) for x in out_players]
+    off = [d for d in dbl if d[1] != d[2] or d[3] != d[4]]
+    print(f"  double/triple-doubles: {len(dbl) - len(off)}/{len(dbl)} tally to ESPN's season"
+          + (f" -- OFF: {off[:3]}" if off else ""))
 
     withshots = sum(1 for x in out_players if x.get("shots"))
     print(f"  shot charts: {withshots}/{len(out_players)} player cards")

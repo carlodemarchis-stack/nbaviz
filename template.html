@@ -197,8 +197,15 @@ a{color:inherit}
 .polbl{position:absolute;top:1px;margin-left:5px;font-style:normal;font-size:8px;
   font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);
   opacity:.85;white-space:nowrap}
-.wl.w{color:rgba(232,236,245,.8)}
-.wl.l{color:rgba(150,166,205,.42)}
+.wl.w{color:#7ce8ae}
+.wl.l{color:#ff9089}
+/* A gold dot for a triple-double, silver for a double-double, above the W or L. Counted
+   from points / rebounds / assists / steals / blocks reaching 10: three-plus is a triple,
+   two-plus a double, and ESPN counts a triple as a double too -- which is how these tally
+   exactly to its season figures for all 100. */
+.wl b{display:block;width:5px;height:5px;border-radius:50%;margin:0 auto 2px}
+.wl b.td{background:var(--gold);box-shadow:0 0 0 1px rgba(7,9,16,.6)}
+.wl b.dd{background:#c8d2e2;box-shadow:0 0 0 1px rgba(7,9,16,.6)}
 /* 82 letters need about 9px of column each before they stop being legible. */
 @media (max-width:1160px){ .wl{display:none} }
 .arclab{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);
@@ -1097,11 +1104,12 @@ function logSvg(p, m){
   // in a win. Only on games he played -- a bar he has no bar for gets no letter.
   let wl = '';
   SLOTS.forEach((slot, c) => {
-    let res, v;
+    let res, v, dbl = 0;
     if (slot.po !== undefined){
       const e = PO[slot.po] || [];
       res = e[7];
       v = e[POV[m] === undefined ? 0 : POV[m]] || 0;
+      dbl = e[11] || 0;
     } else {
       if (slot.gap || slot.li < 0) return;
       const ab = ((p.teams || [])[slot.ti] || {}).t;
@@ -1109,6 +1117,7 @@ function logSvg(p, m){
       if (!g || !g.res) return;
       res = g.res;
       v = M.val(p, slot.li);
+      dbl = ((p.glog || [])[slot.li] || [])[7] || 0;
     }
     if (!res) return;
     // Capped at 94% so a bar that reaches the ceiling keeps its letter inside the plot,
@@ -1116,7 +1125,8 @@ function logSvg(p, m){
     const top = Math.max(0, y(v) / H * 100);
     wl += `<i class="wl ${res === 'W' ? 'w' : 'l'}"
       style="left:${((c + 0.5) / SLOTS.length * 100).toFixed(3)}%;
-             bottom:${Math.min(100 - top, 94).toFixed(2)}%">${res}</i>`;
+             bottom:${Math.min(100 - top, 94).toFixed(2)}%"
+      >${dbl ? `<b class="${dbl === 3 ? 'td' : 'dd'}"></b>` : ''}${res}</i>`;
   });
 
   const poLbl = poX === null ? '' :
@@ -1134,6 +1144,10 @@ function logSvg(p, m){
   <div class="mixlab" style="margin-top:4px">${key}
     <span><i class="dot" style="background:var(--gold)"></i>best
       <b>${high}</b>${over ? ' — above the scale' : ''}</span>
+    ${p.td ? `<span><i class="dot" style="background:var(--gold);border-radius:50%"></i
+      >triple-double <b>${p.td}</b></span>` : ''}
+    ${p.dd - p.td > 0 ? `<span><i class="dot" style="background:#c8d2e2;border-radius:50%"></i
+      >double-double <b>${p.dd - p.td}</b></span>` : ''}
     <span style="margin-left:auto;color:var(--dim)">${tail}</span>
   </div>`;
 }
