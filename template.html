@@ -217,6 +217,36 @@ a{color:inherit}
 
 .rost{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column}
 .rgrid{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+/* --- squad deck: 18 players as 6 x 3 mini cards ------------------------------- */
+.rhd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;
+  font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.rhd .rhk{font-size:8.5px;opacity:.7;letter-spacing:.06em}
+.rdeck{flex:1 1 auto;min-height:0;display:grid;gap:7px;
+  grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr))}
+.pmini{position:relative;display:flex;flex-direction:column;min-height:0;overflow:hidden;
+  border:1px solid var(--line);border-radius:11px;background:var(--pan2);
+  text-decoration:none;color:inherit;transition:border-color .14s,transform .14s}
+.pmini:hover{border-color:var(--tc);transform:translateY(-2px)}
+/* Portrait sits on a wash of the team's colour; the jersey is the watermark behind it. */
+/* The row is only ~95px tall, so the text rows must not be allowed to shrink --
+   flex:0 0 auto on each, and the portrait takes whatever is left. */
+.pmshot{position:relative;flex:1 1 auto;min-height:0;overflow:hidden}
+.pmshot::before{content:'';position:absolute;inset:0;opacity:.32;
+  background:linear-gradient(180deg,var(--tc) -10%,transparent 78%)}
+.pmshot img{position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+  height:100%;width:auto;object-fit:contain;object-position:bottom center}
+.pmno{position:absolute;top:2px;right:5px;font-size:17px;font-weight:800;line-height:1;
+  color:var(--ink);opacity:.22;font-variant-numeric:tabular-nums;z-index:1}
+/* Initials sit behind the portrait, so they only show when it is missing. */
+.pmfb{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;
+  font-size:16px;font-weight:800;color:var(--ink);opacity:.24;letter-spacing:.04em}
+.pmname{flex:0 0 auto;padding:3px 6px 0;font-size:9.5px;font-weight:700;line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pmstats{flex:0 0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;
+  margin:3px 5px 4px;padding-top:3px;border-top:1px solid var(--line)}
+.pmstats b{font-size:10.5px;font-weight:700;text-align:center;
+  font-variant-numeric:tabular-nums;color:var(--dim)}
+.pmstats b:first-child{color:var(--ink)}
 .rrow{display:grid;grid-template-columns:1fr 30px 42px 42px 42px;gap:7px;align-items:center;
   font-size:11.5px;padding:3px 7px;border-radius:7px;font-variant-numeric:tabular-nums}
 .rrow:nth-child(odd){background:var(--pan2)}
@@ -1274,19 +1304,28 @@ function teamCard(t){
     : `<div class="box"><div class="k">Playoffs</div>
        <div style="font-size:12px;color:var(--dim);margin-top:3px">Did not qualify.</div></div>`;
 
-  const roster = t.roster.length ? `<div class="rost panel" style="padding:12px 14px">
-      <div class="rrow hd"><span>Who played</span><span class="n">G</span>
-        <span class="n">PTS<i>avg</i></span><span class="n">REB<i>avg</i></span>
-        <span class="n">AST<i>avg</i></span></div>
-      <div class="rgrid">${t.roster.map(r => {
-        const nm = NAMES[r.id] || ['—',''];
-        const who = CARD_OF_PLAYER[r.id] != null
-          ? plink(r.id, esc(nm[0]))
-          : `<a class="xl" href="#" onclick="openRoster('${t.abbr}','${r.id}');return false"
-              >${esc(nm[0])}</a>`;
-        return `<div class="rrow"><span class="nm">${who}<i>${esc(nm[1])}</i></span>
-          <span class="n">${r.g}</span><span class="n">${r.ppg}</span>
-          <span class="n">${r.rpg}</span><span class="n">${r.apg}</span></div>`;
+  /* Six across, three down. Every roster in the data is 18 or fewer -- 28 teams have
+     exactly 18, Houston 16, Miami 17 -- so a whole squad fits and nobody is cut.
+     Click behaviour is unchanged: a top-100 player jumps to his card in the deck,
+     everyone else opens the lazy-loaded one from data/roster/. */
+  const roster = t.roster.length ? `<div class="rost panel" style="padding:11px 12px">
+      <div class="rhd"><span>Who played</span>
+        <span class="rhk">pts · reb · ast per game</span></div>
+      <div class="rdeck">${t.roster.slice(0, 18).map(r => {
+        const nm = NAMES[r.id] || ['—', '', ''];
+        const ini = esc(nm[0]).split(' ').map(w => w[0] || '').join('').slice(0, 2);
+        const carded = CARD_OF_PLAYER[r.id] != null;
+        const go = carded
+          ? `onclick="go(${CARD_OF_PLAYER[r.id]});return false"`
+          : `onclick="openRoster('${t.abbr}','${r.id}');return false"`;
+        return `<a class="pmini" href="#" ${go} style="--tc:${winColor(t)}"
+            title="${esc(nm[0])} · ${esc(nm[1])} · ${r.g} games">
+          <span class="pmshot"><i class="pmfb">${ini}</i>${nm[2]
+            ? `<b class="pmno">${esc(nm[2])}</b>` : ''}<img src="${head(r.id)}" alt=""
+            loading="lazy" onerror="this.style.display='none'"></span>
+          <span class="pmname">${esc(nm[0])}</span>
+          <span class="pmstats"><b>${r.ppg}</b><b>${r.rpg}</b><b>${r.apg}</b></span>
+        </a>`;
       }).join('')}</div></div>` : '';
 
   return `<div class="in">
