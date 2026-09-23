@@ -293,6 +293,15 @@ a{color:inherit}
   border-radius:99px;background:rgba(7,9,16,.55);border:1px solid rgba(255,255,255,.14);
   color:var(--ink);font-variant-numeric:tabular-nums;backdrop-filter:blur(3px)}
 .pmpills b:first-child{background:rgba(7,9,16,.68);border-color:var(--tc);color:#fff}
+/* Points carries its unit on a second line; rebounds and assists are read off their
+   position beside it, which is how a box score is read anyway. */
+.pmpills b.pmpts{line-height:1.1;padding:1px 0 2px}
+.pmpills b.pmpts i{display:block;font-style:normal;font-size:6px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;opacity:.62}
+/* The jersey is back as a watermark on the photo as well as beside the name -- big and
+   faint behind the player, small and factual under him. */
+.pmwm{position:absolute;top:2px;right:5px;z-index:1;font-size:17px;font-weight:800;
+  line-height:1;color:var(--ink);opacity:.22;font-variant-numeric:tabular-nums}
 /* The number now sits beside the name, under the photo. */
 .pmno{flex:0 0 auto;font-size:9.5px;font-weight:700;color:var(--dim);
   font-variant-numeric:tabular-nums}
@@ -1431,8 +1440,10 @@ function teamCard(t){
         return `<a class="pmini" href="#" ${go} style="--tc:${winColor(t)}"
             title="${esc(nm[0])} · ${esc(nm[1])} · ${r.g} games · ${r.ppg} pts, ${r.rpg} reb, ${r.apg} ast">
           <span class="pmshot"><i class="pmfb">${ini}</i><img src="${head(r.id)}" alt=""
-            loading="lazy" onerror="this.style.display='none'">
-            <span class="pmpills"><b>${r.ppg}</b><b>${r.rpg}</b><b>${r.apg}</b></span></span>
+            loading="lazy" onerror="this.style.display='none'">${nm[2]
+              ? `<b class="pmwm">${esc(nm[2])}</b>` : ''}
+            <span class="pmpills"><b class="pmpts">${r.ppg}<i>pts</i></b
+              ><b>${r.rpg}</b><b>${r.apg}</b></span></span>
           <span class="pmname"><span>${esc(nm[0])}</span>${nm[2]
             ? `<b class="pmno">${esc(nm[2])}</b>` : ''}</span>
         </a>`;
