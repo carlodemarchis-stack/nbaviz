@@ -1481,7 +1481,8 @@ function playerCard(p){
             <div class="k">Points avg</div></div>
           <div><div class="v vg">${pie(p.wl ? p.wl[0] / (p.gp || 1) * 100 : 0, 'var(--win)')}<span>${p.gp}</span></div>
             <div class="k">Games${p.wl ? ` · ${p.wl[0]}-${p.wl[1]}` : ''}</div></div>
-          <div><div class="v">${p.mpg}</div><div class="k">Minutes avg</div></div>
+          <div><div class="v">${p.mpg}${topMin(p) ? `<small class="mx">max ${topMin(p)}</small>` : ''}</div>
+            <div class="k">Minutes avg</div></div>
           <div><div class="v">${p.rpg}${p.highs.reb ? `<small class="mx">max ${p.highs.reb}</small>` : ''}</div>
             <div class="k">Rebounds avg</div></div>
           <div><div class="v">${p.apg}${p.highs.ast ? `<small class="mx">max ${p.highs.ast}</small>` : ''}</div>
