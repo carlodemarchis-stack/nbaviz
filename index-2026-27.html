@@ -292,10 +292,12 @@ a{color:inherit}
 .shot img{width:100%;height:100%;object-fit:contain;object-position:bottom center;
   display:block;filter:drop-shadow(0 12px 28px rgba(0,0,0,.55))}
 /* The portrait's drop-shadow filter makes it a stacking context, which lifts it over the
-   absolutely-positioned chip behind it -- so a real click on the team name landed on the
+   absolutely-positioned box behind it -- so a real click on the team name landed on the
    photo. (element.click() does not hit-test, which is why a scripted click still worked
-   and hid this.) Raise the number box back above it. */
-.jerseybox{z-index:2}
+   and hid this.) Raising the whole box fixed the click but dragged the giant number in
+   front of the player's face with it. Only the chip needs to come forward: the number
+   stays behind the cutout, where it belongs. */
+.jteam{position:relative;z-index:3}
 /* Two numbers in the photo box: the JERSEY big on the right, because that is what he is
    called on the floor, and the RANK small on the left, captioned, because a bare number
    is ambiguous and the ordering is the film's, not his. Both are watermarks behind the
