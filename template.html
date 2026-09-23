@@ -235,6 +235,13 @@ a{color:inherit}
 .wl b.dd{background:#c8d2e2;box-shadow:0 0 0 1px rgba(7,9,16,.6)}
 /* 82 letters need about 9px of column each before they stop being legible. */
 @media (max-width:1160px){ .wl{display:none} }
+/* One opponent code per game, on the arc's own column grid. Three letters need about
+   13px at this size and a full-width arc gives 18 per game, so they fit at desktop width
+   and are dropped below 1100px rather than rendered as mush. */
+.arcopp{display:flex;gap:1px;padding-left:34px;margin-top:4px}
+.arcopp i{flex:1 1 0;min-width:0;font-style:normal;font-size:6.5px;line-height:1;
+  font-weight:700;text-align:center;letter-spacing:-.02em;white-space:nowrap;overflow:hidden}
+@media (max-width:1100px){ .arcopp{display:none} }
 .arclab{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);
   margin-top:4px;font-variant-numeric:tabular-nums}
 
@@ -899,6 +906,14 @@ function arcSvg(t){
     if (y(-v) < H - 10) labels += lbl(-v, '\u2212' + v);
   }
 
+  // Who each game was against, under its own tick. HTML, not <text>: this svg is
+   // preserveAspectRatio="none", which stretches glyphs flat. Each code takes its
+   // opponent's colour through readable(), so a dark navy still clears the background.
+  const oppRow = `<div class="arcopp">${games.map(g => g.opp
+    ? `<i style="color:${readable(winColor(TEAMS[g.opp] || {}), 3.2)}"
+        >${esc(g.opp).slice(0, 3)}</i>`
+    : '<i></i>').join('')}</div>`;
+
   return `<div class="arcbox">${labels}<svg class="arc" viewBox="0 0 ${W} ${TOT}" preserveAspectRatio="none">
     <defs>
       <clipPath id="up${t.abbr}"><rect x="0" y="0" width="${W}" height="${mid}"/></clipPath>
@@ -914,7 +929,7 @@ function arcSvg(t){
     ${hi > 0 ? `<circle cx="${x(pts.indexOf(hi)).toFixed(1)}" cy="${y(hi).toFixed(1)}" r="3.6" fill="var(--win)"/>` : ''}
     ${lo < 0 ? `<circle cx="${x(pts.indexOf(lo)).toFixed(1)}" cy="${y(lo).toFixed(1)}" r="3.6" fill="var(--loss)"/>` : ''}
     ${ticks}
-  </svg></div>
+  </svg></div>${oppRow}
   <div class="mixlab" style="margin-top:4px">
     <span><i class="dot" style="background:var(--win)"></i>peak <b>${sgn(hi)}</b></span>
     <span><i class="dot" style="background:var(--loss)"></i>low <b>${sgn(lo)}</b></span>
