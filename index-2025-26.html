@@ -1301,7 +1301,9 @@ function playerCard(p){
                 ? `Record across both teams in the ${p.gp} games he played`
                 : `${esc(t.name || p.team)}'s record in the ${p.gp} games he played`}"
               >${p.wl ? `${p.wl[0]}-${p.wl[1]}<i class="jsep">·</i>` : ''}<i
-                class="jpo${e.champ ? ' champ' : ''}">${e.txt}</i></span>`; })()}</div>
+                class="jpo${e.champ ? ' champ' : ''}"${e.miss
+                  ? ' title="Missed the playoffs — went to the draft lottery"' : ''
+                }>${e.txt}</i></span>`; })()}</div>
           <img src="${head(p.id)}" alt="${esc(p.name)}" loading="lazy"
                onerror="this.style.display='none'">
         </div>
@@ -1424,7 +1426,9 @@ function ladderCard(){
    "Lost the NBA Finals", "Lost the <round>", or nothing if they never made it. */
 function poEnding(t){
   const o = (t && t.po && t.po.outcome) || '';
-  if (!o) return {txt: 'Not qualified', champ: false};
+  // The league's own word for missing out: those teams go to the draft lottery.
+  // Names a phase like every other value here instead of negating one.
+  if (!o) return {txt: 'Lottery', champ: false, miss: true};
   if (o === 'CHAMPIONS') return {txt: 'Champions', champ: true};
   const phase = o.replace(/^(Lost|Won) the /, '')
                  .replace(/^NBA Finals$/, 'Finals')
