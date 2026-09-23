@@ -188,6 +188,11 @@ a{color:inherit}
 .wlwrap{position:absolute;left:34px;right:0;top:0;bottom:0;pointer-events:none}
 .wl{position:absolute;transform:translateX(-50%);margin-bottom:2px;font-style:normal;
   font-size:7.5px;font-weight:700;line-height:1}
+/* Names the divider, just right of it and clear of the top of the plot. Positioned by
+   the same slot fraction as the line itself, so the two cannot drift apart. */
+.polbl{position:absolute;top:1px;margin-left:5px;font-style:normal;font-size:8px;
+  font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);
+  opacity:.85;white-space:nowrap}
 .wl.w{color:rgba(232,236,245,.8)}
 .wl.l{color:rgba(150,166,205,.42)}
 /* 82 letters need about 9px of column each before they stop being legible. */
@@ -1034,7 +1039,11 @@ function logSvg(p, m){
              bottom:${Math.min(100 - top, 94).toFixed(2)}%">${res}</i>`;
   });
 
-  return `<div class="arcbox loghook">${labels}<span class="wlwrap">${wl}</span>
+  const poLbl = poX === null ? '' :
+    `<i class="polbl" style="left:${(((SEASON.length + GAP / 2) / SLOTS.length) * 100)
+      .toFixed(3)}%">Playoffs</i>`;
+
+  return `<div class="arcbox loghook">${labels}<span class="wlwrap">${wl}${poLbl}</span>
   <svg class="log" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
     ${grid}${poDiv}<rect class="loghl" x="0" y="0" width="0" height="${H}"
       fill="rgba(255,255,255,.13)" pointer-events="none"/>${bars}
