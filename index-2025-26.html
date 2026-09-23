@@ -199,7 +199,20 @@ a{color:inherit}
   opacity:.85;white-space:nowrap}
 .wl.w{color:#7ce8ae}
 .wl.l{color:#ff9089}
-/* A gold dot for a triple-double, silver for a double-double, above the W or L. Counted
+/* Result and double-doubles read as two strips under the plot rather than as labels
+   floating over the bars -- eighty letters and dots at eighty different heights is noise,
+   and at a common baseline the same marks scan as a run. Equal flex cells line up with
+   the svg's columns because that svg is preserveAspectRatio="none", so its column c spans
+   exactly c/N to (c+1)/N of the same width. The playoff gold stays on the bar's own foot,
+   inside the chart, where it marks the bar rather than the night. */
+.gstrips{padding-left:34px;display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.gstrip{display:flex;gap:1px;height:5px}
+.gstrip i{flex:1 1 0;min-width:0;border-radius:1px;background:transparent}
+.gstrip i.w{background:#7ce8ae}
+.gstrip i.l{background:#ff9089}
+.gstrip i.td{background:var(--gold)}
+.gstrip i.dd{background:#c8d2e2}
+/* A gold cell for a triple-double, silver for a double-double, in the lower strip. Counted
    from points / rebounds / assists / steals / blocks reaching 10: three-plus is a triple,
    two-plus a double, and ESPN counts a triple as a double too -- which is how these tally
    exactly to its season figures for all 100. */
@@ -271,6 +284,11 @@ a{color:inherit}
              var(--pan2);border:1px solid var(--line);display:flex;align-items:flex-end}
 .shot img{width:100%;height:100%;object-fit:contain;object-position:bottom center;
   display:block;filter:drop-shadow(0 12px 28px rgba(0,0,0,.55))}
+/* The portrait's drop-shadow filter makes it a stacking context, which lifts it over the
+   absolutely-positioned chip behind it -- so a real click on the team name landed on the
+   photo. (element.click() does not hit-test, which is why a scripted click still worked
+   and hid this.) Raise the number box back above it. */
+.jerseybox{z-index:2}
 /* Two numbers in the photo box: the JERSEY big on the right, because that is what he is
    called on the floor, and the RANK small on the left, captioned, because a bare number
    is ambiguous and the ordering is the film's, not his. Both are watermarks behind the
@@ -1102,7 +1120,7 @@ function logSvg(p, m){
 
   // One W or L per bar, so a big night against a loss reads differently from a big night
   // in a win. Only on games he played -- a bar he has no bar for gets no letter.
-  let wl = '';
+  const wlCell = SLOTS.map(() => ''), dbCell = SLOTS.map(() => '');
   SLOTS.forEach((slot, c) => {
     let res, v, dbl = 0;
     if (slot.po !== undefined){
@@ -1123,27 +1141,32 @@ function logSvg(p, m){
     // Capped at 94% so a bar that reaches the ceiling keeps its letter inside the plot,
     // sitting just within the top of the bar rather than floating off the chart.
     const top = Math.max(0, y(v) / H * 100);
-    wl += `<i class="wl ${res === 'W' ? 'w' : 'l'}"
-      style="left:${((c + 0.5) / SLOTS.length * 100).toFixed(3)}%;
-             bottom:${Math.min(100 - top, 94).toFixed(2)}%"
-      >${dbl ? `<b class="${dbl === 3 ? 'td' : 'dd'}"></b>` : ''}${res}</i>`;
+    wlCell[c] = res === 'W' ? 'w' : 'l';
+    dbCell[c] = dbl === 3 ? 'td' : dbl === 2 ? 'dd' : '';
   });
 
   const poLbl = poX === null ? '' :
     `<i class="polbl" style="left:${(((SEASON.length + GAP / 2) / SLOTS.length) * 100)
       .toFixed(3)}%">Playoffs</i>`;
 
-  return `<div class="arcbox loghook">${labels}<span class="wlwrap">${wl}${poLbl}</span>
+  const strips = `<div class="gstrips">
+    <div class="gstrip">${wlCell.map(k => `<i class="${k}"></i>`).join('')}</div>
+    <div class="gstrip">${dbCell.map(k => `<i class="${k}"></i>`).join('')}</div>
+  </div>`;
+
+  return `<div class="arcbox loghook">${labels}<span class="wlwrap">${poLbl}</span>
   <svg class="log" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
     ${grid}${poDiv}<rect class="loghl" x="0" y="0" width="0" height="${H}"
       fill="rgba(255,255,255,.13)" pointer-events="none"/>${bars}
     <line x1="0" y1="${y(avg).toFixed(1)}" x2="${W}" y2="${y(avg).toFixed(1)}"
       stroke="rgba(232,236,245,.6)" stroke-width="1.1" stroke-dasharray="5 4"
       vector-effect="non-scaling-stroke"/>
-  </svg></div>
+  </svg></div>${strips}
   <div class="mixlab" style="margin-top:4px">${key}
     <span><i class="dot" style="background:var(--gold)"></i>best
       <b>${high}</b>${over ? ' — above the scale' : ''}</span>
+    <span><i class="dot" style="background:#7ce8ae"></i>won
+      <i class="dot" style="background:#ff9089;margin-left:7px"></i>lost</span>
     ${p.td ? `<span><i class="dot" style="background:var(--gold);border-radius:50%"></i
       >triple-double <b>${p.td}</b></span>` : ''}
     ${p.dd - p.td > 0 ? `<span><i class="dot" style="background:#c8d2e2;border-radius:50%"></i
