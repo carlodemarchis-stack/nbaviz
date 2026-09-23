@@ -274,20 +274,32 @@ a{color:inherit}
 .pmshot{position:relative;flex:1 1 auto;min-height:0;overflow:hidden}
 .pmshot::before{content:'';position:absolute;inset:0;opacity:.32;
   background:linear-gradient(180deg,var(--tc) -10%,transparent 78%)}
-.pmshot img{position:absolute;left:50%;bottom:0;transform:translateX(-50%);
-  height:100%;width:auto;object-fit:contain;object-position:bottom center}
-.pmno{position:absolute;top:2px;right:5px;font-size:17px;font-weight:800;line-height:1;
-  color:var(--ink);opacity:.22;font-variant-numeric:tabular-nums;z-index:1}
+/* The portrait fills the tile rather than sitting inside it: cover, anchored to the top
+   so the crop takes from the chest rather than the face. */
+.pmshot img{position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;object-position:top center}
+/* The averages ride on the photo as translucent pills. A scrim under them, because a
+   pale jersey would otherwise swallow the numbers. */
+.pmpills{position:absolute;left:0;right:0;bottom:0;z-index:2;display:grid;
+  grid-template-columns:repeat(3,1fr);gap:3px;padding:10px 4px 4px;
+  background:linear-gradient(180deg,transparent,rgba(7,9,16,.72) 55%)}
+.pmpills b{font-size:10px;font-weight:700;text-align:center;line-height:1.35;
+  border-radius:99px;background:rgba(7,9,16,.55);border:1px solid rgba(255,255,255,.14);
+  color:var(--ink);font-variant-numeric:tabular-nums;backdrop-filter:blur(3px)}
+.pmpills b:first-child{background:rgba(7,9,16,.68);border-color:var(--tc);color:#fff}
+/* The number now sits beside the name, under the photo. */
+.pmno{flex:0 0 auto;font-size:9.5px;font-weight:700;color:var(--dim);
+  font-variant-numeric:tabular-nums}
+.pmno::before{content:'#'}
 /* Initials sit behind the portrait, so they only show when it is missing. */
 .pmfb{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;
   font-size:16px;font-weight:800;color:var(--ink);opacity:.24;letter-spacing:.04em}
-.pmname{flex:0 0 auto;padding:3px 6px 0;font-size:9.5px;font-weight:700;line-height:1.2;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pmstats{flex:0 0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;
-  margin:3px 5px 4px;padding-top:3px;border-top:1px solid var(--line)}
-.pmstats b{font-size:10.5px;font-weight:700;text-align:center;
-  font-variant-numeric:tabular-nums;color:var(--dim)}
-.pmstats b:first-child{color:var(--ink)}
+/* Name and number share the line, but only the NAME may truncate -- ellipsising the whole
+   row dropped the number off the four longest names in the league. */
+.pmname{flex:0 0 auto;display:flex;align-items:baseline;gap:4px;padding:4px 6px 5px;
+  font-size:9.5px;font-weight:700;line-height:1.2}
+.pmname > span{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
 .rrow{display:grid;grid-template-columns:1fr 30px 42px 42px 42px;gap:7px;align-items:center;
   font-size:11.5px;padding:3px 7px;border-radius:7px;font-variant-numeric:tabular-nums}
 .rrow:nth-child(odd){background:var(--pan2)}
@@ -1410,12 +1422,12 @@ function teamCard(t){
           ? `onclick="go(${CARD_OF_PLAYER[r.id]});return false"`
           : `onclick="openRoster('${t.abbr}','${r.id}');return false"`;
         return `<a class="pmini" href="#" ${go} style="--tc:${winColor(t)}"
-            title="${esc(nm[0])} · ${esc(nm[1])} · ${r.g} games">
-          <span class="pmshot"><i class="pmfb">${ini}</i>${nm[2]
-            ? `<b class="pmno">${esc(nm[2])}</b>` : ''}<img src="${head(r.id)}" alt=""
-            loading="lazy" onerror="this.style.display='none'"></span>
-          <span class="pmname">${esc(nm[0])}</span>
-          <span class="pmstats"><b>${r.ppg}</b><b>${r.rpg}</b><b>${r.apg}</b></span>
+            title="${esc(nm[0])} · ${esc(nm[1])} · ${r.g} games · ${r.ppg} pts, ${r.rpg} reb, ${r.apg} ast">
+          <span class="pmshot"><i class="pmfb">${ini}</i><img src="${head(r.id)}" alt=""
+            loading="lazy" onerror="this.style.display='none'">
+            <span class="pmpills"><b>${r.ppg}</b><b>${r.rpg}</b><b>${r.apg}</b></span></span>
+          <span class="pmname"><span>${esc(nm[0])}</span>${nm[2]
+            ? `<b class="pmno">${esc(nm[2])}</b>` : ''}</span>
         </a>`;
       }).join('')}</div></div>` : '';
 
