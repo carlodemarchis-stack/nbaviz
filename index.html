@@ -286,22 +286,27 @@ a{color:inherit}
   object-fit:cover;object-position:top center}
 /* The averages ride on the photo as translucent pills. A scrim under them, because a
    pale jersey would otherwise swallow the numbers. */
-.pmpills{position:absolute;left:0;right:0;bottom:0;z-index:2;display:grid;
-  grid-template-columns:repeat(3,1fr);gap:3px;padding:10px 4px 4px;
-  background:linear-gradient(180deg,transparent,rgba(7,9,16,.72) 55%)}
-.pmpills b{font-size:10px;font-weight:700;text-align:center;line-height:1.35;
-  border-radius:99px;background:rgba(7,9,16,.55);border:1px solid rgba(255,255,255,.14);
-  color:var(--ink);font-variant-numeric:tabular-nums;backdrop-filter:blur(3px)}
-.pmpills b:first-child{background:rgba(7,9,16,.68);border-color:var(--tc);color:#fff}
+/* Left-aligned rectangles stacked at the foot of the photo, rather than three centred
+   pills spread across it -- the numbers line up on one edge, so the eye reads down the
+   column instead of hunting across each tile. */
+.pmpills{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;
+  flex-direction:column;align-items:flex-start;gap:2px;padding:14px 5px 5px;
+  background:linear-gradient(180deg,transparent,rgba(7,9,16,.78) 58%)}
+.pmpills b{display:block;min-width:30px;padding:1px 5px;font-size:10px;font-weight:700;
+  text-align:left;line-height:1.3;border-radius:4px;background:rgba(7,9,16,.6);
+  border:1px solid rgba(255,255,255,.14);color:var(--ink);
+  font-variant-numeric:tabular-nums;backdrop-filter:blur(3px)}
+.pmpills b:first-child{background:rgba(7,9,16,.72);border-color:var(--tc);color:#fff}
 /* Points carries its unit on a second line; rebounds and assists are read off their
    position beside it, which is how a box score is read anyway. */
-.pmpills b.pmpts{line-height:1.1;padding:1px 0 2px}
+.pmpills b.pmpts{line-height:1.1;padding:1px 5px 2px}
 .pmpills b.pmpts i{display:block;font-style:normal;font-size:6px;font-weight:700;
   letter-spacing:.12em;text-transform:uppercase;opacity:.62}
 /* The jersey is back as a watermark on the photo as well as beside the name -- big and
    faint behind the player, small and factual under him. */
-.pmwm{position:absolute;top:2px;right:5px;z-index:1;font-size:17px;font-weight:800;
-  line-height:1;color:var(--ink);opacity:.22;font-variant-numeric:tabular-nums}
+.pmwm{position:absolute;top:0;right:5px;z-index:1;font-size:34px;font-weight:800;
+  line-height:1;color:var(--ink);opacity:.2;font-variant-numeric:tabular-nums;
+  letter-spacing:-.04em}
 /* The number now sits beside the name, under the photo. */
 .pmno{flex:0 0 auto;font-size:9.5px;font-weight:700;color:var(--dim);
   font-variant-numeric:tabular-nums}
@@ -897,14 +902,19 @@ function arcSvg(t){
     Not played yet \u2014 ${games.length} games scheduled.</div>`;
 
   const W = 1000, H = 260, mid = H / 2;
-  const y = v => mid - (v / ARC_SCALE) * (mid - 6);
+  /* Scaled to THIS club rather than to the deck. A team that never went past +12 used a
+     tenth of the box under a shared +/-50, and its season read as a flat line. The cost,
+     stated on the card itself: two arcs can no longer be compared by shape alone. */
+  const SC = Math.max(6, Math.ceil(Math.max(Math.abs(hi), Math.abs(lo), 1) / 5) * 5);
+  const STEP = SC <= 12 ? 2 : SC <= 30 ? 5 : 10;
+  const y = v => mid - (v / SC) * (mid - 6);
   const x = i => i / Math.max(1, pts.length - 1) * W;
   let d = `M0 ${y(pts[0]).toFixed(1)}`;
   pts.forEach((v, i) => { d += ` L${x(i).toFixed(1)} ${y(v).toFixed(1)}`; });
   const area = `${d} L${W} ${mid} L0 ${mid} Z`;
 
   let grid = '';
-  for (let v = 10; v <= ARC_SCALE; v += 10){
+  for (let v = STEP; v <= SC; v += STEP){
     for (const sv of [v, -v]){
       const gy = y(sv);
       if (gy < 4 || gy > H - 4) continue;
@@ -928,7 +938,7 @@ function arcSvg(t){
   const lbl = (v, txt, cls) =>
     `<span class="arclbl ${cls || ''}" style="top:${(y(v) / TOT * 100).toFixed(2)}%">${txt}</span>`;
   let labels = lbl(0, '.500', 'zero');
-  for (let v = 20; v <= ARC_SCALE; v += 20){
+  for (let v = STEP * 2; v <= SC; v += STEP * 2){
     if (y(v) > 10) labels += lbl(v, '+' + v);
     if (y(-v) < H - 10) labels += lbl(-v, '\u2212' + v);
   }
@@ -961,7 +971,7 @@ function arcSvg(t){
     <span><i class="dot" style="background:var(--win)"></i>peak <b>${sgn(hi)}</b></span>
     <span><i class="dot" style="background:var(--loss)"></i>low <b>${sgn(lo)}</b></span>
     <span>finished <b>${sgn(pts[pts.length-1])}</b></span>
-    <span style="margin-left:auto;color:var(--dim)">82 games \u00b7 same \u00b150 scale on every card</span>
+    <span style="margin-left:auto;color:var(--dim)">${games.length} games \u00b7 scale set by this club, \u00b1${SC}</span>
   </div>`;
 }
 
