@@ -277,7 +277,7 @@ def main(label):
                 # as a double too, which is what makes these tally to its season figures.
                 cats = sum(1 for v in (pts, reb, ast, r[12], r[13]) if v >= 10)
                 plog[pid].append((date_of.get(gid, ""), pts, reb, ast, tpm, mins,
-                                  ab, gidx.get((ab, gid), -1), ftm, cats))
+                                  ab, gidx.get((ab, gid), -1), ftm, cats, r[12], r[13]))
 
     # --- playoff per-game lines, tagged with the round they belong to.
     # Kept apart from plog: these games are not in a team's `games` list, so they carry
@@ -303,7 +303,7 @@ def main(label):
                     continue
                 pocats = sum(1 for v in (pts, reb, ast, r[12], r[13]) if v >= 10)
                 pologs[pid].append((date, ri, pts, tpm, ftm, mins, reb, ast,
-                                    opp, us, them, res, pocats))
+                                    opp, us, them, res, pocats, r[12], r[13]))
 
     # --- teams
     out_teams = []
@@ -394,8 +394,13 @@ def main(label):
             elif g[11] == "L":
                 powl[1] += 1
         tix = {t["t"]: i for i, t in enumerate(p["teams"])}
+        # ..., steals, blocks -- carried only so the hover can NAME the categories that
+        # made a double-double. Points, rebounds and assists alone cannot: a game can
+        # qualify on steals or blocks, and then the panel would list two numbers under
+        # ten and call it a double-double.
         game_log = [[tix.get(x[6], 0), x[7], x[5], x[2], x[3], x[4], x[8],
-                     3 if x[9] >= 3 else 2 if x[9] >= 2 else 0] for x in log]
+                     3 if x[9] >= 3 else 2 if x[9] >= 2 else 0, x[10], x[11]]
+                    for x in log]
         return {
             "rank": p["rank"], "id": p["id"], "nbaId": p["nbaId"],
             "name": p["name"], "short": p["short"], "team": p["team"],
@@ -436,9 +441,10 @@ def main(label):
             # Playoff games on the same timeline as the season, after a divider.
             # [pts, threes made, free throws made, minutes, rebounds, assists,
             #  round index, W/L, opponent, us, them] -- round index keys the labels.
-            # [pts, 3pm, ftm, min, reb, ast, round, W/L, opp, us, them, dbl]
+            # [pts, 3pm, ftm, min, reb, ast, round, W/L, opp, us, them, dbl, stl, blk]
             "polog": ([[g[2], g[3], g[4], g[5], g[6], g[7], g[1], g[11],
-                        g[8], g[9], g[10], 3 if g[12] >= 3 else 2 if g[12] >= 2 else 0]
+                        g[8], g[9], g[10], 3 if g[12] >= 3 else 2 if g[12] >= 2 else 0,
+                        g[13], g[14]]
                        for g in sorted(pologs[p["id"]])] or None),
             "poMiss": (team_run_label(po.get(p.get("team"))) 
                        if not p.get("po") and po.get(p.get("team")) else None),

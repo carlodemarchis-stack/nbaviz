@@ -1646,7 +1646,23 @@ function nightTip(o){
     (o.mix ? `<div class="trow">${o.mix.map((v, n) =>
       `<i class="dot" style="background:${['var(--three)','var(--two)','var(--ft)'][n]}"></i>${v}`
       ).join(' ')} <span class="tdim">from threes / twos / the line</span></div>` : '') +
-    `<div class="tdim">${o.reb} reb · ${o.ast} ast · ${o.min} min</div>`;
+    `<div class="tdim">${o.reb} reb · ${o.ast} ast · ${o.min} min</div>` +
+    dblLine(o);
+}
+
+/* Which categories made the double. Ten or more of points, rebounds, assists, steals or
+   blocks counts; three of them is a triple-double, two a double-double. Named rather than
+   just badged, because "double-double" says nothing about whether it was scoring and
+   boards or boards and assists. */
+function dblLine(o){
+  if (!o.dbl) return '';
+  const got = [['pts', o.pts], ['reb', o.reb], ['ast', o.ast],
+               ['stl', o.stl], ['blk', o.blk]].filter(x => (x[1] || 0) >= 10);
+  const gold = o.dbl === 3;
+  return `<div class="trow" style="display:flex;align-items:center;gap:6px">
+    <i class="dot" style="border-radius:50%;background:${gold ? 'var(--gold)' : '#c8d2e2'}"></i>
+    <b style="color:${gold ? 'var(--gold)' : '#c8d2e2'}">${gold ? 'Triple' : 'Double'}-double</b>
+    <span class="tdim">${got.map(x => `${x[1]} ${x[0]}`).join(' · ')}</span></div>`;
 }
 
 function nightsCard(){
@@ -1923,12 +1939,12 @@ function logHover(e, box){
   if (slot.gap) { clearHl(); return hideTip(); }
   if (slot.po !== undefined){
     const e2 = PO[slot.po] || [];
-    const [pts, tpm, ftm, min, reb, ast, ri, res, opp, us, them] = e2;
+    const [pts, tpm, ftm, min, reb, ast, ri, res, opp, us, them, dbl, stl, blk] = e2;
     return showTip(
       `<div class="tdim" style="font-size:10px;letter-spacing:.14em;
          text-transform:uppercase">${PO_ROUNDS[ri] || 'Playoffs'} · game ${slot.po + 1}</div>` +
       nightTip({pts, name: p.name, team: p.team, opp, h: false, w: res === 'W',
-                us, them, date: '', min, reb, ast,
+                us, them, date: '', min, reb, ast, dbl, stl, blk,
                 mix: [tpm * 3, Math.max(0, pts - tpm * 3 - ftm), ftm]}),
       e.clientX, e.clientY);
   }
@@ -1949,11 +1965,11 @@ function logHover(e, box){
   // The log carries points only; the rest of the night is a pointer into the team's
   // own games list, which the payload already ships for the team cards.
   const i = slot.li;
-  const [, , min, reb, ast, tpm, ftm] = (p.glog || [])[i] || [];
+  const [, , min, reb, ast, tpm, ftm, dbl, stl, blk] = (p.glog || [])[i] || [];
   showTip(head +
     nightTip({pts: p.log[i], name: p.name, team: ab, opp: g.opp,
               h: g.ha === 'H', w: g.res === 'W', us: g.us, them: g.them,
-              date: g.date, min, reb, ast,
+              date: g.date, min, reb, ast, dbl, stl, blk,
               mix: [tpm * 3, Math.max(0, p.log[i] - tpm * 3 - ftm), ftm]}),
     e.clientX, e.clientY);
 }
