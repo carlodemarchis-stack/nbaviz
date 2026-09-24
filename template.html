@@ -201,6 +201,9 @@ a{color:inherit}
   font-size:10px;color:rgba(255,255,255,.72);font-variant-numeric:tabular-nums;
   pointer-events:none;line-height:1;white-space:nowrap}
 .arclbl.zero{color:#fff;font-weight:700}
+.arcpk{position:absolute;font-size:9.5px;font-weight:800;color:var(--win);
+  font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:none;
+  text-shadow:0 1px 3px rgba(9,11,18,.92),0 0 2px rgba(9,11,18,.92)}
 /* W / L sits on top of each bar. HTML, not <text>, for the same reason the axis labels
    are: this svg is preserveAspectRatio="none", which stretches glyphs sideways. The
    wrapper covers exactly the plot -- left:34px is the y-axis gutter, and an absolutely
@@ -957,6 +960,20 @@ function arcSvg(t){
   for (let v = STEP * 2; v <= SC; v += STEP * 2){
     if (y(v) > 10) labels += lbl(v, '+' + v);
     if (y(-v) < H - 10) labels += lbl(-v, '\u2212' + v);
+  }
+
+  /* The peak carries its own number, next to the dot that marks it. HTML again, not
+     <text> -- and positioned against the same box the gridline labels use, so the
+     34px axis gutter has to be added back before the fraction along the season.
+     It flips below the dot in the top tenth of the box and anchors left/right at
+     the ends, so a peak in the first or last games is not half outside the card. */
+  if (hi > 0){
+    const f = pts.length > 1 ? pts.indexOf(hi) / (pts.length - 1) : 0;
+    const top = y(hi) / TOT * 100;
+    const tx = f < .05 ? '0' : f > .95 ? '-100%' : '-50%';
+    labels += `<span class="arcpk" style="left:calc(34px + (100% - 34px) * ${f.toFixed(4)});
+      top:${top.toFixed(2)}%;transform:translate(${tx},${top < 10 ? '0' : '-100%'})
+      translateY(${top < 10 ? '9px' : '-7px'})">${sgn(hi)}</span>`;
   }
 
   // Who each game was against, under its own tick. HTML, not <text>: this svg is
