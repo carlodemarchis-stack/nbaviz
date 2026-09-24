@@ -131,6 +131,85 @@ b{font-weight:700}
   white-space:nowrap;flex:0 0 auto;min-width:118px}
 #gno b{color:var(--ink)}
 
+/* ---------- the playoff bracket ----------
+   Sixteen teams, folded in from both sides: West on the left, East on the right, the
+   Finals in the middle. Each column is an eight-row grid and a series spans 2, 4 or 8 of
+   those rows, so a semi-final sits exactly between the two first-round series that fed
+   it -- which is what makes the connectors drawable in CSS rather than measured.
+   Round r spans 2^(r+1) rows; the gap between a pair's centres is that same span, so the
+   vertical join is 2^(r+1)/8 of the column's height. */
+/* A DEFINITE height, which is the whole trick: `repeat(8, 1fr)` in a grid whose own
+   height is indefinite resolves every row to max-content, so the rows came out uneven
+   and a semi-final no longer lined up between its two feeders. The flex column gives
+   .brack a resolved height, and the rows can then actually be eighths of it. */
+body.bracket #wrap{display:flex;flex-direction:column}
+.brack{--gap:20px;display:grid;grid-template-columns:1fr minmax(150px,.72fr) 1fr;
+  gap:var(--gap);flex:1 1 auto;min-height:520px}
+.brside{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap)}
+/* Each series is placed on its own centre line rather than by grid spans: a series in
+   round r is one of 8/2^(r+1) slots, and the centre of slot i is (i + .5) of that slot's
+   share of the column. Stated once, it makes a semi-final land exactly between its two
+   feeders by arithmetic instead of by hoping align-self and a row span agree -- which
+   they did not, leaving every other box a row out of place. */
+.brcol{position:relative;min-width:0}
+.brcol > .ser{position:absolute;left:0;right:0;transform:translateY(-50%)}
+/* The connectors are the column's, not the boxes': a stub out to the gutter at each
+   series' centre line, and one vertical joining each pair at the far edge of that
+   gutter -- which is exactly where the next round's box begins. */
+.brstub,.brjoin{position:absolute;pointer-events:none}
+.brstub{width:var(--gap);border-top:1px solid rgba(150,166,205,.3)}
+.brjoin{border-left:1px solid rgba(150,166,205,.3)}
+.brside.l .brstub,.brside.l .brjoin{right:calc(-1 * var(--gap))}
+.brside.r .brstub,.brside.r .brjoin{left:calc(-1 * var(--gap))}
+/* The Finals column is not a bracket column -- one series, centred, with the champion
+   line under it. */
+.brfin{display:flex;flex-direction:column;justify-content:center;gap:10px;min-width:0}
+.brhd{display:grid;grid-template-columns:1fr minmax(150px,.72fr) 1fr;gap:var(--gap);
+  margin-bottom:9px}
+.brhd > div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap)}
+.brhd span{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);
+  text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brhd .fin{color:var(--gold);font-weight:700}
+
+.ser{position:relative;min-width:0;border-radius:10px;
+  border:1px solid var(--line);background:linear-gradient(180deg,#11151f,#0c1018);
+  padding:5px 6px 6px}
+/* The stub out to the next round, and the vertical that joins a pair. Only the upper
+   series of each pair draws the vertical, downward, so the two meet at the next
+   column's own edge -- where the next series' box already is. */
+.ser.fin{border-color:rgba(240,194,74,.45);
+  background:linear-gradient(180deg,#191506,#0c1018);padding:9px 10px 10px}
+
+
+.sline{display:flex;align-items:center;gap:6px;padding:3px 3px;border-radius:7px;
+  font-size:11.5px;min-width:0}
+.sline img{width:19px;height:19px;object-fit:contain;flex:0 0 auto;border-radius:50%;
+  background:rgba(232,236,245,.07)}
+.sline .sseed{flex:0 0 auto;font-size:8.5px;color:var(--dim);font-weight:700;width:11px;
+  text-align:right}
+.sline .snick{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;color:var(--dim)}
+.sline em{flex:0 0 auto;font-style:normal;font-weight:700;color:var(--dim);
+  font-variant-numeric:tabular-nums}
+.sline.won{background:rgba(232,236,245,.055)}
+.sline.won .snick{color:var(--ink);font-weight:600}
+.sline.won em{color:var(--ink)}
+.ser.fin .sline{font-size:13px}
+.ser.fin .sline img{width:26px;height:26px}
+.sgames{display:flex;gap:2px;margin-top:5px;flex-wrap:nowrap}
+.pog{flex:1 1 0;min-width:0;height:13px;border-radius:3px;display:grid;place-items:center;
+  font-size:7.5px;font-weight:800;color:#07090f;font-style:normal;cursor:default}
+.brnone{color:var(--dim);font-size:13px;padding:30px 4px}
+.brcap{font-size:10px;color:var(--dim);margin-top:10px;text-align:center}
+body.bracket #legend,body.bracket #ctlbar,body.bracket .towonly{display:none}
+body.bracket #wrap{bottom:0}
+@media (max-width:900px){
+  .brack,.brhd{grid-template-columns:1fr;gap:12px}
+  .brside{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .brhd > div{display:none}
+  .ser::after,.ser.up::before{display:none}
+}
+
 #tip{position:fixed;z-index:70;pointer-events:none;display:none;background:#0d1019;
   border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:11.5px;
   box-shadow:0 8px 26px rgba(0,0,0,.5);white-space:nowrap}
@@ -179,8 +258,9 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
   <div class="seg" id="strip"></div>
   <div class="seg" id="seasons"></div>
   <div class="grow"></div>
-  <span class="lab">Group</span><div class="seg" id="groups"></div>
-  <span class="lab">Order</span><div class="seg" id="sorts"></div>
+  <span class="lab">View</span><div class="seg" id="views"></div>
+  <span class="lab towonly">Group</span><div class="seg towonly" id="groups"></div>
+  <span class="lab towonly">Order</span><div class="seg towonly" id="sorts"></div>
   <div id="credit">Produced with passion by <b>Carlo De Marchis</b> ·
     <a href="#" onclick="openMod('cmodal');return false">Credits</a></div>
 </div>
@@ -341,6 +421,7 @@ function groupsOf(){
 }
 
 function draw(){
+  if (VIEW === 'bracket') return;      // the bracket owns #wrap while it is up
   const wrap = document.getElementById('wrap');
   const anyPlayed = TEAMS.some(t => counting(t).some(g => g.res));
 
@@ -435,7 +516,7 @@ addEventListener('resize', paintScrub);
 /* Standing rule in this family: a reload lands exactly where you were, never at the
    start, and the address bar is always shareable. */
 function syncHash(){
-  const want = `#${group}/${sort}/${G}`;
+  const want = VIEW === 'bracket' ? '#bracket' : `#${group}/${sort}/${G}`;
   if (location.hash !== want) history.replaceState(null, '', want);
   PREF.set('game', G);
   updateSocialMeta();
@@ -453,6 +534,17 @@ function updateSocialMeta(){
   try {
     // The keys are the app's own: league / conf / div. Spelling them out here as
     // "conference" and "division" silently fell through to the league wording.
+    if (VIEW === 'bracket'){
+      const f = BSER[BSER.length - 1];
+      const ch = f && (f.aw > f.bw ? f.a : f.b);
+      socMeta('agwas:title', `NBA Playoffs ${SEASON}`);
+      socMeta('agwas:cta', (ch
+        ? `${ch.name} came out of the ${SEASON} bracket as champions`
+        : `The ${SEASON} playoff bracket`) + ' — full interactive experience below');
+      socMeta('agwas:tags', 'nba dataviz playoffs bracket');
+      socMeta('agwas:mentions', 'nba');
+      return;
+    }
     const scope = {league:'the whole league', conf:'by conference',
                    div:'by division'}[group] || 'the whole league';
     const done = G >= MAXG;
@@ -464,6 +556,7 @@ function updateSocialMeta(){
   } catch(e) {}
 }
 function readHash(){
+  if ((location.hash || '') === '#bracket') return {view: 'bracket'};
   const m = /^#([a-z]+)\/([a-z]+)\/(\d+)$/.exec(location.hash || '');
   if (!m) return null;
   return {group: m[1], sort: m[2], g: +m[3]};
@@ -489,6 +582,145 @@ function seg(host, items, current, onPick){
     const b = e.target.closest('[data-v]'); if (!b) return; onPick(b.dataset.v);
   };
 }
+/* ---------- the playoff bracket ----------
+
+   Rebuilt from the same per-team `po` blocks the cards use rather than shipped as its
+   own structure: every series is in there twice, once from each side, so it is a matter
+   of pairing them up and deciding which way round to draw each one.
+
+   Orientation is by seed, higher first. The Finals is the one series where the two come
+   from different conferences and both can be a 1 seed, so it falls back to the better
+   regular-season record -- which is also who had home court. */
+const PO_ROUNDS = ['1st Round', 'Semifinals', 'Conference Finals', 'NBA Finals'];
+/* Where each first-round series sits, top to bottom, in a conference's half. Not seed
+   order: the 1 seed and the 4/5 series share the top half of the bracket, which is why
+   4 comes second and 2 last. */
+const R1ORDER = [1, 4, 3, 2];
+let BSER = [];                 // flattened, so a game chip can point back at its series
+
+function seriesAll(){
+  const seen = new Set(), out = [[], [], [], []];
+  TEAMS.forEach(t => {
+    if (!t.po) return;
+    (t.po.rounds || []).forEach(r => {
+      const ri = PO_ROUNDS.indexOf(r.round);
+      if (ri < 0 || !r.opp) return;
+      const key = ri + ':' + [t.abbr, r.opp].sort().join('|');
+      if (seen.has(key)) return;
+      seen.add(key);
+      const o = TEAMS.find(x => x.abbr === r.opp);
+      if (!o) return;
+      const flip = (o.seed || 99) < (t.seed || 99) ||
+                   ((o.seed || 99) === (t.seed || 99) && o.w > t.w);
+      // The games are recorded from the side whose block we read, so flipping the series
+      // flips every one of them: result, score and venue.
+      out[ri].push(flip
+        ? {a: o, b: t, aw: r.l, bw: r.w, round: r.round,
+           games: (r.games || []).map(g => ({res: g.res === 'W' ? 'L' : 'W',
+             us: g.them, them: g.us, ha: g.ha === 'H' ? 'A' : 'H', date: g.date}))}
+        : {a: t, b: o, aw: r.w, bw: r.l, round: r.round, games: r.games || []});
+    });
+  });
+  return out;
+}
+
+function bracketHtml(){
+  const R = seriesAll();
+  BSER = [];
+  if (!R[0].length) return `<p class="brnone">No playoffs in ${esc(SEASON)} yet — the
+    bracket fills in once the postseason is played.</p>`;
+
+  // A fixed order, so the two sides do not swap between seasons.
+  const sides = [['West', 'l'], ['East', 'r']].filter(c => R[0].some(s => s.a.conf === c[0]));
+  const r1 = {}, slotOf = {};
+  sides.forEach(([c]) => {
+    r1[c] = R[0].filter(s => s.a.conf === c)
+      .sort((x, y) => R1ORDER.indexOf(x.a.seed) - R1ORDER.indexOf(y.a.seed));
+    r1[c].forEach((s, i) => { slotOf[s.a.abbr] = i; slotOf[s.b.abbr] = i; });
+  });
+  // A later series sits where its feeders did: halve the first-round slot once per round.
+  const slotFor = (s, ri) => ri === 0
+    ? (r1[s.a.conf] || []).indexOf(s)
+    : Math.floor((slotOf[s.a.abbr] != null ? slotOf[s.a.abbr]
+                                           : slotOf[s.b.abbr] || 0) / Math.pow(2, ri));
+
+  const line = (t, w, won) => `<div class="sline ${won ? 'won' : ''}">
+    <img src="${crest(t.abbr)}" alt="" loading="lazy">
+    <b class="sseed">${t.seed || ''}</b>
+    <span class="snick">${esc(t.nick)}</span><em>${w}</em></div>`;
+
+  // The centre line of slot i in a round that has 8/span slots.
+  const at = (slot, ri) => (slot + .5) * Math.pow(2, ri + 1) / 8 * 100;
+  const ser = (s, ri) => {
+    const si = BSER.push(s) - 1;
+    const fin = ri === 3, done = s.aw === 4 || s.bw === 4;
+    return `<div class="ser ${fin ? 'fin' : ''}" data-s="${si}"
+      style="${fin ? '' : `top:${at(slotFor(s, ri), ri).toFixed(3)}%`}">
+      ${line(s.a, s.aw, done && s.aw > s.bw)}
+      ${line(s.b, s.bw, done && s.bw > s.aw)}
+      <div class="sgames">${s.games.map((g, i) => {
+        const win = g.res === 'W' ? s.a : s.b;
+        return `<i class="pog" data-s="${si}" data-i="${i}"
+          style="background:${winColor(win)}">${i + 1}</i>`;
+      }).join('')}</div></div>`;
+  };
+
+  const col = (list, ri) => {
+    let deco = '';
+    list.forEach(x => {
+      const slot = slotFor(x, ri);
+      deco += `<i class="brstub" style="top:${at(slot, ri).toFixed(3)}%"></i>`;
+      // The vertical joins a pair inside this column. The conference finals have no
+      // partner here -- their pair IS the NBA Finals, on the other side of the page.
+      if (ri < 2 && slot % 2 === 0)
+        deco += `<i class="brjoin" style="top:${at(slot, ri).toFixed(3)}%;height:${
+          (at(slot + 1, ri) - at(slot, ri)).toFixed(3)}%"></i>`;
+    });
+    return `<div class="brcol">${deco}${list.map(x => ser(x, ri)).join('')}</div>`;
+  };
+  const side = ([conf, cls]) => {
+    const cols = [0, 1, 2].map(ri =>
+      col(ri === 0 ? r1[conf] : R[ri].filter(s => s.a.conf === conf), ri));
+    // The right-hand side reads inward, so its rounds run the other way.
+    return `<div class="brside ${cls}">${
+      (cls === 'r' ? cols.reverse() : cols).join('')}</div>`;
+  };
+
+  const RN = ['1st Round', 'Semifinals', 'Conf. Finals'];
+  const head = `<div class="brhd">
+    <div>${RN.map(r => `<span>${r}</span>`).join('')}</div>
+    <span class="fin">NBA Finals</span>
+    <div>${[...RN].reverse().map(r => `<span>${r}</span>`).join('')}</div></div>`;
+
+  const finals = R[3][0];
+  const champ = finals && (finals.aw > finals.bw ? finals.a : finals.b);
+  return head + `<div class="brack">
+    ${sides[0] ? side(sides[0]) : '<div></div>'}
+    <div class="brfin">
+      ${finals ? ser(finals, 3) : ''}
+      ${champ ? `<div class="brcap" style="color:var(--gold)">★ ${esc(champ.name)} —
+        ${champ.w}-${champ.l}, ${esc(champ.conf)} ${champ.seed} seed</div>` : ''}
+    </div>
+    ${sides[1] ? side(sides[1]) : '<div></div>'}
+  </div>
+  <div class="brcap">Higher seed on top of each series · a game takes the colour of the
+    team that won it · hover a game for the score</div>`;
+}
+
+/* ---------- which view ---------- */
+let VIEW = PREF.get('view', 'towers');
+function drawViews(){
+  seg('views', [['towers', 'Towers'], ['bracket', 'Bracket']], VIEW, v => {
+    VIEW = v; PREF.set('view', v); drawViews(); applyView();
+  });
+}
+function applyView(){
+  document.body.classList.toggle('bracket', VIEW === 'bracket');
+  if (VIEW === 'bracket') document.getElementById('wrap').innerHTML = bracketHtml();
+  else draw();
+  syncHash();
+}
+
 function drawGroups(){
   seg('groups', [['league','League'],['conf','Conference'],['div','Division']], group,
     v => { group = v; PREF.set('group', v); drawGroups(); draw(); });
@@ -497,7 +729,7 @@ function drawSorts(){
   seg('sorts', [['wins','Record'],['name','A–Z']], sort,
     v => { sort = v; PREF.set('sort', v); drawSorts(); draw(); });
 }
-drawGroups(); drawSorts();
+drawGroups(); drawSorts(); drawViews();
 
 document.getElementById('strip').innerHTML =
   `<span class="pill on">Season</span>` +
@@ -532,7 +764,39 @@ document.getElementById('applist').innerHTML = APPS.map(a =>
 
 /* hover tooltip on a tower */
 const tip = document.getElementById('tip');
+function placeTip(e){
+  const pad = 14;
+  tip.classList.add('on');
+  tip.style.left = Math.min(e.clientX + pad, innerWidth - tip.offsetWidth - 8) + 'px';
+  tip.style.top  = Math.min(e.clientY + pad, innerHeight - tip.offsetHeight - 8) + 'px';
+}
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const WHEN = d => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || '');
+  return m ? `${+m[3]} ${MON[+m[2] - 1]} ${m[1]}` : '';
+};
 document.getElementById('wrap').addEventListener('mousemove', e => {
+  if (VIEW === 'bracket'){
+    const chip = e.target.closest('.pog'), box = e.target.closest('.ser');
+    const s = (chip || box) && BSER[+(chip || box).dataset.s];
+    if (!s){ tip.classList.remove('on'); return; }
+    if (chip){
+      const g = s.games[+chip.dataset.i] || {};
+      const home = g.ha === 'H' ? s.a : s.b, win = g.res === 'W' ? s.a : s.b;
+      tip.innerHTML = `<div class="t">Game ${+chip.dataset.i + 1} · ${esc(s.round)}</div>
+        <b>${esc(s.a.abbr)} ${g.us}–${g.them} ${esc(s.b.abbr)}</b>
+        <div class="t" style="margin-top:3px">at ${esc(home.abbr)} · ${WHEN(g.date)}</div>
+        <div class="t" style="color:${winColor(win)}">${esc(win.nick)} won it</div>`;
+    } else {
+      const lead = s.aw > s.bw ? s.a : s.b;
+      const w = Math.max(s.aw, s.bw), l = Math.min(s.aw, s.bw);
+      tip.innerHTML = `<div class="t">${esc(s.round)}</div>
+        <b>${esc(s.a.nick)} ${s.aw}–${s.bw} ${esc(s.b.nick)}</b>
+        <div class="t" style="margin-top:3px">${w === 4
+          ? `${esc(lead.nick)} took it ${w}-${l}` : `${w}-${l}, still going`}</div>`;
+    }
+    return placeTip(e);
+  }
   const tw = e.target.closest('.tw');
   if (!tw){ tip.classList.remove('on'); return; }
   const t = TEAMS.find(x => x.abbr === tw.dataset.ab);
@@ -543,10 +807,7 @@ document.getElementById('wrap').addEventListener('mousemove', e => {
       ${t.seed ? `${esc(t.conf)} ${t.seed} seed` : 'no seed'}</div>
     ${last ? `<div class="t">latest: ${last.res} ${last.us}-${last.them} v ${esc(last.opp)}</div>` : ''}
     ${t.po ? `<div class="t" style="color:var(--gold)">${esc(t.po.outcome)}</div>` : ''}`;
-  tip.classList.add('on');
-  const pad = 14;
-  tip.style.left = Math.min(e.clientX + pad, innerWidth - tip.offsetWidth - 8) + 'px';
-  tip.style.top  = Math.min(e.clientY + pad, innerHeight - tip.offsetHeight - 8) + 'px';
+  placeTip(e);
 });
 document.getElementById('wrap').addEventListener('mouseleave', () => tip.classList.remove('on'));
 
@@ -559,25 +820,16 @@ addEventListener('keydown', e => {
   else if (e.key === 'ArrowLeft') { e.preventDefault(); setG(G - 1); }
   else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
   else if (e.key === 'Home') setG(1);
-  else if (e.key === 'End') (function start(){
-  const h = readHash();
-  if (h){
-    if (['league','conf','div'].includes(h.group)) group = h.group;
-    if (['wins','name'].includes(h.sort)) sort = h.sort;
-    drawGroups(); drawSorts();
-    setG(h.g);
-  } else {
-    let g = MAXG;
-    try { const saved = +PREF.get('game', MAXG); if (saved >= 1 && saved <= MAXG) g = saved; }
-    catch(e){}
-    setG(g);
-  }
-})();
+  else if (e.key === 'End') setG(MAXG);
+  else if (e.key === 'b') { VIEW = VIEW === 'bracket' ? 'towers' : 'bracket';
+                            PREF.set('view', VIEW); drawViews(); applyView(); }
 });
 addEventListener('resize', () => { sizeCells(); });
 
 (function start(){
   const h = readHash();
+  // #bracket is the whole state this view has; the towers keep their own.
+  if (h && h.view === 'bracket'){ VIEW = 'bracket'; drawViews(); return applyView(); }
   if (h){
     if (['league','conf','div'].includes(h.group)) group = h.group;
     if (['wins','name'].includes(h.sort)) sort = h.sort;
@@ -589,6 +841,9 @@ addEventListener('resize', () => { sizeCells(); });
     catch(e){}
     setG(g);
   }
+  // A restored Bracket preference paints over the towers we just drew, which is cheap
+  // and keeps the slider state intact underneath for when you switch back.
+  if (VIEW === 'bracket') applyView();
 })();
 </script>
 </body>

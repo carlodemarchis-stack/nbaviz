@@ -78,8 +78,10 @@ def playoff_run(games):
             s["w"] += 1
         elif g["res"] == "L":
             s["l"] += 1
+        # The date rides along so the bracket can say WHEN each game of a series was --
+        # the card only ever needed the result, but a series read game by game wants it.
         s["games"].append({"res": g["res"], "us": g.get("us"), "them": g.get("them"),
-                           "ha": g["ha"]})
+                           "ha": g["ha"], "date": (g.get("date") or "")[:10]})
     order.sort(key=lambda r: ROUND_ORDER.index(r) if r in ROUND_ORDER else 9)
     rounds = [series[r] for r in order]
     if not rounds:
