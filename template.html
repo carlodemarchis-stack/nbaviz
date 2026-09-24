@@ -440,8 +440,8 @@ a{color:inherit}
   .rankno em{font-size:min(9cqh, 6cqw)}
 }
 
-/* Points / Rebounds / Assists over the same game chart. */
-/* Title + Split/Avg + Points/Rebounds/Assists fit on one line in the card's right column
+/* Points / Assists / Rebounds over the same game chart. */
+/* Title + Split/Avg + Points/Assists/Rebounds fit on one line in the card's right column
    but not on a phone. Wrap them, same as .courthd -- a shrunk flex item breaks its own
    text mid-phrase instead. */
 .loghd{display:flex;align-items:center;gap:10px;row-gap:4px;margin-bottom:6px;flex-wrap:wrap}
@@ -899,7 +899,7 @@ const sgn = n => (n > 0 ? '+' : '') + n;
    chart that is about teams. The charts are split by their subject, not kept in one lump
    at the end: the scoring race, the shot diet and the biggest nights all rank players,
    the ladder ranks teams. */
-const PCHARTS = ['race', 'volume', 'nights'];
+const PCHARTS = ['race', 'astrace', 'rebrace', 'volume', 'nights'];
 const TCHARTS = ['ladder'];
 
 const CARDS = [{kind:'cover'}]
@@ -1110,12 +1110,14 @@ function deckScale(pick, step, floor){
 const METRICS = {
   pts: {name: 'points scored', tab: 'Points', avg: p => p.ppg, high: p => p.highs.pts,
         val: (p, i) => p.log[i], scale: () => LOG_SCALE, step: 20},
-  reb: {name: 'rebounds', tab: 'Rebounds', avg: p => p.rpg, high: p => p.highs.reb,
-        val: (p, i) => ((p.glog || [])[i] || [])[3] || 0,
-        scale: () => deckScale(p => p.highs.reb, 5, 10), step: 5},
+  // Assists before rebounds, here and everywhere else the three appear together: the
+  // tabs on the game chart are built by walking this object.
   ast: {name: 'assists', tab: 'Assists', avg: p => p.apg, high: p => p.highs.ast,
         val: (p, i) => ((p.glog || [])[i] || [])[4] || 0,
         scale: () => deckScale(p => p.highs.ast, 5, 10), step: 5},
+  reb: {name: 'rebounds', tab: 'Rebounds', avg: p => p.rpg, high: p => p.highs.reb,
+        val: (p, i) => ((p.glog || [])[i] || [])[3] || 0,
+        scale: () => deckScale(p => p.highs.reb, 5, 10), step: 5},
   // Minutes has no precomputed high in the payload -- it comes off the game log, which
   // is already there. Step 10, because the axis runs to about 50 and a step of 5 would
   // be ten gridlines.
@@ -1569,7 +1571,7 @@ function teamCard(t){
      everyone else opens the lazy-loaded one from data/roster/. */
   const roster = t.roster.length ? `<div class="rost panel" style="padding:11px 12px">
       <div class="rhd"><span>Who played</span>
-        <span class="rhk">pts · reb · ast per game</span></div>
+        <span class="rhk">pts · ast · reb per game</span></div>
       <div class="rdeck">${t.roster.slice(0, 18).map(r => {
         const nm = NAMES[r.id] || ['—', '', ''];
         const ini = esc(nm[0]).split(' ').map(w => w[0] || '').join('').slice(0, 2);
@@ -1582,13 +1584,13 @@ function teamCard(t){
                  : k != null ? `onclick="goTail(${k});return false"`
                  : 'onclick="return false"';
         return `<a class="pmini" href="${at ? '#' + at : '#'}" ${go} style="--tc:${winColor(t)}"
-            title="${esc(nm[0])} · ${esc(nm[1])} · ${r.g} games · ${r.ppg} pts, ${r.rpg} reb, ${r.apg} ast">
+            title="${esc(nm[0])} · ${esc(nm[1])} · ${r.g} games · ${r.ppg} pts, ${r.apg} ast, ${r.rpg} reb">
           <span class="pmshot"><i class="pmfb">${ini}</i><img src="${head(r.id)}" alt=""
             loading="lazy" onerror="this.style.display='none'">${nm[2]
               ? `<b class="pmwm">${esc(nm[2])}</b>` : ''}
             <b class="pmtot">${r.pts.toLocaleString('en-US')}<i>total</i></b>
             <span class="pmpills"><b>${r.ppg}<i>pts</i></b
-              ><b>${r.rpg}<i>reb</i></b><b>${r.apg}<i>ast</i></b></span></span>
+              ><b>${r.apg}<i>ast</i></b><b>${r.rpg}<i>reb</i></b></span></span>
           <span class="pmname"><span>${esc(nm[0])}</span>${nm[2]
             ? `<b class="pmno">${esc(nm[2])}</b>` : ''}</span>
         </a>`;
@@ -1697,10 +1699,10 @@ function playerCard(p){
             <div class="k">Games${p.wl ? ` · ${p.wl[0]}-${p.wl[1]}` : ''}</div></div>
           <div><div class="v">${p.mpg}${topMin(p) ? `<small class="mx">max ${topMin(p)}</small>` : ''}</div>
             <div class="k">Minutes avg</div></div>
-          <div><div class="v">${p.rpg}${p.highs.reb ? `<small class="mx">max ${p.highs.reb}</small>` : ''}</div>
-            <div class="k">Rebounds avg</div></div>
           <div><div class="v">${p.apg}${p.highs.ast ? `<small class="mx">max ${p.highs.ast}</small>` : ''}</div>
             <div class="k">Assists avg</div></div>
+          <div><div class="v">${p.rpg}${p.highs.reb ? `<small class="mx">max ${p.highs.reb}</small>` : ''}</div>
+            <div class="k">Rebounds avg</div></div>
         </div></div>
         <div class="box"><div class="kv">
           <div><div class="v vg">${pie(p.fg,'var(--two)')}<span style="color:var(--two)">${p.fg}<small>%</small></span></div>
@@ -1724,8 +1726,8 @@ function playerCard(p){
           <div><div class="v vg">${pie(p.po.wl ? p.po.wl[0] / (p.po.gp || 1) * 100 : 0, 'var(--win)')}<span>${p.po.gp}</span></div>
             <div class="k">Games${p.po.wl ? ` · ${p.po.wl[0]}-${p.po.wl[1]}` : ''}</div></div>
           <div><div class="v">${p.po.mpg}${delta(p.po.mpg, p.mpg)}</div><div class="k">Minutes avg</div></div>
-          <div><div class="v">${p.po.rpg}${delta(p.po.rpg, p.rpg)}</div><div class="k">Rebounds avg</div></div>
           <div><div class="v">${p.po.apg}${delta(p.po.apg, p.apg)}</div><div class="k">Assists avg</div></div>
+          <div><div class="v">${p.po.rpg}${delta(p.po.rpg, p.rpg)}</div><div class="k">Rebounds avg</div></div>
         </div></div>` : p.poMiss ? `<div class="box pomiss">Did not appear in the playoffs \u2014 ${esc(p.team)} ${esc(p.poMiss)}</div>` : ''}
         <div class="panel" style="padding:12px 15px;flex:0 0 auto">
           <div class="kick" style="margin-bottom:6px">Where the points came from</div>
@@ -1753,31 +1755,58 @@ function noPlayers(kick, title){
   </div>`;
 }
 
-/* Total points or points a game. They are different questions -- the first rewards
-   staying on the floor, the second ignores it -- and the deck is ordered by the first,
-   so the second needs somewhere to live. */
-let RACEBY = 'tot';
-function setRaceBy(k){
-  if (k === RACEBY) return;
-  RACEBY = k;
-  const el = document.querySelector('.card .racewrap');
-  if (el) el.outerHTML = raceBody();
+/* Three ranking charts off one shape: points, assists, rebounds, in that order
+   everywhere they appear together.
+
+   Each is drawn from D.leaders, which ranks the WHOLE POOL rather than the carded 100.
+   For points those are the same list, but for the other two they are not: Rudy Gobert is
+   third in rebounding and has no card, so ranking what happened to be on hand would have
+   credited the lead to the wrong player. Points takes the same route anyway, so no card
+   depends on the deck's order staying what it is. */
+const RACES = {
+  race: {k: 'pts', kick: 'the scoring race', h: 'Who scored the most',
+         totW: 'points', avgW: 'a game',
+         totP: 'Total points, not per game — so staying on the floor counts.',
+         avgP: `Points a game, with no minimum — so a player who missed half the season
+                is here on the strength of the half he played.`},
+  astrace: {k: 'ast', kick: 'the assist race', h: 'Who passed the most',
+            totW: 'assists', avgW: 'a game',
+            totP: 'Total assists — the pass that led to the basket, all season.',
+            avgP: 'Assists a game, with no minimum for games played.'},
+  rebrace: {k: 'reb', kick: 'the rebounding race', h: 'Who rebounded the most',
+            totW: 'rebounds', avgW: 'a game',
+            totP: 'Total rebounds, both ends of the floor.',
+            avgP: 'Rebounds a game, with no minimum for games played.'},
+};
+/* Per chart, not shared: switching the assist card to averages should not silently
+   re-rank the scoring one behind your back. */
+const RACEBY = {race: 'tot', astrace: 'tot', rebrace: 'tot'};
+function setRaceBy(kind, k){
+  if (k === RACEBY[kind]) return;
+  RACEBY[kind] = k;
+  const i = CARDS.findIndex(c => c.kind === kind);
+  const el = i >= 0 && cards[i].querySelector('.racewrap');
+  if (el) el.outerHTML = raceBody(kind);
 }
 
-function raceCard(){
-  if (!D.players.length) return noPlayers('the scoring race', `Who scored the most, ${SEASON}`);
+function raceCard(kind){
+  const cfg = RACES[kind];
+  const rows = ((D.leaders || {})[cfg.k] || {}).tot || [];
+  if (!rows.length) return noPlayers(cfg.kick, `${cfg.h}, ${SEASON}`);
   return `<div class="in">
-    <div class="kick">Chart · the scoring race</div>
+    <div class="kick">Chart · ${cfg.kick}</div>
     <h2 style="font-size:clamp(19px,2.2vw,29px);font-weight:700;letter-spacing:-.02em">
-      Who scored the most, ${SEASON}</h2>
-    ${raceBody()}
+      ${cfg.h}, ${SEASON}</h2>
+    ${raceBody(kind)}
   </div>`;
 }
 
-function raceBody(){
-  const avg = RACEBY === 'avg';
-  const val = p => avg ? p.ppg : p.pts;
-  const top = [...D.players].sort((a, b) => val(b) - val(a)).slice(0, 10);
+/* A leader row is [id, team, total, average, games played]. */
+function raceBody(kind){
+  const cfg = RACES[kind];
+  const avg = RACEBY[kind] === 'avg';
+  const top = (((D.leaders || {})[cfg.k] || {})[avg ? 'avg' : 'tot'] || []).slice(0, 10);
+  const val = r => avg ? r[3] : r[2];
   const max = val(top[0]);
   /* Columns capped at 92% of the plot so the totals have somewhere to sit. That is a top
      margin, not a broken axis: the baseline is zero and every column is scaled by the
@@ -1785,37 +1814,37 @@ function raceBody(){
      no. 1 over a whole season. */
   return `<div class="racewrap">
     <div class="racehd">
-      <p>${avg
-        ? `Points a game, with no minimum — so a player who missed half the season is
-           here on the strength of the half he played.`
-        : `Total points, not per game — so staying on the floor counts.`}
-        Columns run from zero and carry the player's team colour.</p>
+      <p>${(avg ? cfg.avgP : cfg.totP).replace(/\s+/g, ' ')}
+        Ranked over everyone who played, not only the hundred with cards.</p>
       <span class="ltabs">${[['tot', 'Total'], ['avg', 'A game']].map(k =>
-        `<button class="ltab ${k[0] === RACEBY ? 'on' : ''}" onclick="setRaceBy('${k[0]}')"
-          >${k[1]}</button>`).join('')}</span>
+        `<button class="ltab ${k[0] === RACEBY[kind] ? 'on' : ''}"
+          onclick="setRaceBy('${kind}','${k[0]}')">${k[1]}</button>`).join('')}</span>
     </div>
-    <div class="race">${top.map((p, i) => {
-      const t = TEAMS[p.team] || {};
+    <div class="race">${top.map((r, i) => {
+      const [id, ab, tot, per, gp] = r;
+      const t = TEAMS[ab] || {}, nm = (NAMES[id] || ['—'])[0];
       // The whole column is the link -- the photo included, which is what anyone
       // actually aims at. The name below is its own link, so it stays outside: an
-      // anchor cannot contain another one.
-      const at = CARD_OF_PLAYER[p.id];
+      // anchor cannot contain another one. goPlayer() covers both kinds of card, which
+      // matters here: three of the ten rebounders have no card in the deck.
+      const at = CARD_OF_PLAYER[id], k = TAIL_OF[id];
+      const href = at != null ? '#' + (at + 1) : k != null ? '#' + (CARDS.length + k + 1) : '#';
       return `<div class="rcol">
-        <div class="rplot"><a class="rbar" href="${at != null ? '#' + (at + 1) : '#'}"
-          onclick="goPlayer('${p.id}');return false"
-          title="${esc(p.name)} — ${p.pts.toLocaleString('en-US')} points"
-          style="height:${(val(p) / max * 92).toFixed(1)}%;--c:${t.primary || 'var(--acc)'}">
-          <b class="rval">${avg ? p.ppg : p.pts.toLocaleString('en-US')}<i>${
-            avg ? 'a game' : 'points'}</i></b>
+        <div class="rplot"><a class="rbar" href="${href}"
+          onclick="goPlayer('${id}');return false"
+          title="${esc(nm)} — ${tot.toLocaleString('en-US')} ${cfg.totW}, ${per} a game"
+          style="height:${(val(r) / max * 92).toFixed(1)}%;--c:${t.primary || 'var(--acc)'}">
+          <b class="rval">${avg ? per : tot.toLocaleString('en-US')}<i>${
+            avg ? cfg.avgW : cfg.totW}</i></b>
           <span class="rfoot"><em class="rrk">${i + 1}</em>
-            <img src="${head(p.id)}" alt="" loading="lazy"
+            <img src="${head(id)}" alt="" loading="lazy"
               onerror="this.style.display='none'"></span></a></div>
         <div class="rnm">
-          <span class="rwho">${plink(p.id, esc(shortName(p.name)))}</span>
-          <i class="rteam">${tlink(p.team, esc(t.name || p.team))}</i>
+          <span class="rwho">${plink(id, esc(shortName(nm)))}</span>
+          <i class="rteam">${tlink(ab, esc(t.name || ab))}</i>
           <i class="rtot">${avg
-            ? `<b>${p.pts.toLocaleString('en-US')}</b> in ${p.gp}`
-            : `<b>${p.ppg}</b> a game`}</i></div>
+            ? `<b>${tot.toLocaleString('en-US')}</b> in ${gp}`
+            : `<b>${per}</b> a game`}</i></div>
       </div>`;
     }).join('')}</div>
   </div>`;
@@ -1911,7 +1940,7 @@ function nightTip(o){
     (o.mix ? `<div class="trow">${o.mix.map((v, n) =>
       `<i class="dot" style="background:${['var(--three)','var(--two)','var(--ft)'][n]}"></i>${v}`
       ).join(' ')} <span class="tdim">from threes / twos / the line</span></div>` : '') +
-    `<div class="tdim">${o.reb} reb · ${o.ast} ast · ${o.min} min</div>` +
+    `<div class="tdim">${o.ast} ast · ${o.reb} reb · ${o.min} min</div>` +
     dblLine(o);
 }
 
@@ -1921,7 +1950,7 @@ function nightTip(o){
    boards or boards and assists. */
 function dblLine(o){
   if (!o.dbl) return '';
-  const got = [['pts', o.pts], ['reb', o.reb], ['ast', o.ast],
+  const got = [['pts', o.pts], ['ast', o.ast], ['reb', o.reb],
                ['stl', o.stl], ['blk', o.blk]].filter(x => (x[1] || 0) >= 10);
   const gold = o.dbl === 3;
   return `<div class="trow" style="display:flex;align-items:center;gap:6px">
@@ -2018,7 +2047,7 @@ film.innerHTML = CARDS.map(c => {
   const body = c.kind === 'cover'  ? coverCard()
              : c.kind === 'team'   ? teamCard(c.t)
              : c.kind === 'player' ? playerCard(c.p)
-             : c.kind === 'race'   ? raceCard()
+             : RACES[c.kind]       ? raceCard(c.kind)
              : c.kind === 'ladder' ? ladderCard()
              : c.kind === 'nights' ? nightsCard()
              : volumeCard();
@@ -2279,7 +2308,8 @@ function label(i){
   if (c.kind === 'cover') return 'Cover';
   if (c.kind === 'team') return c.t.name;
   if (c.kind === 'player') return `${c.p.name} · no. ${c.p.rank}`;
-  return {race:'The scoring race', ladder:'The ladder', volume:'Shot diet',
+  return {race:'The scoring race', astrace:'The assist race',
+          rebrace:'The rebounding race', ladder:'The ladder', volume:'Shot diet',
           nights:'The biggest nights'}[c.kind];
 }
 function section(i){
@@ -2438,7 +2468,9 @@ const INDEX = CARDS.map((c,i) => {
   else if (c.kind === 'player') { s = [c.p.name, c.p.team, c.p.college, c.p.pos].join(' ');
     short = c.p.name; sub = `${c.p.team} · ${c.p.ppg}`; }
   else if (c.kind === 'cover') { s = 'cover start title'; sub = 'the opening card'; }
-  else { s = {race:'scoring race points leaders chart',
+  else { s = {race:'scoring race points leaders chart scorers',
+              astrace:'assist race assists leaders passing chart playmakers',
+              rebrace:'rebounding race rebounds leaders boards chart rebounders',
               ladder:'ladder standings seeds table chart',
               volume:'shot diet attempts volume chart',
               nights:'biggest nights best individual performances players high scoring 100 chart'}[c.kind];

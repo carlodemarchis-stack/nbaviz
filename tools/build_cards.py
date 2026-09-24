@@ -482,6 +482,32 @@ def main(label):
             home.setdefault(r["id"], t["abbr"])
     tail_order = [[p["id"], home[p["id"]]] for p in deck[PLAYER_CARDS:] if p["id"] in home]
 
+    # --- the leader boards behind the three ranking charts.
+    #
+    # Over the WHOLE POOL, not the carded 100, because for two of the three they are not
+    # the same list. The deck is ordered by points, so it has every scorer -- but the
+    # rebounding lead belongs to Donovan Clingan with Rudy Gobert third, and Gobert is
+    # not in the 100. Ranking what happened to be on hand would have had Karl-Anthony
+    # Towns leading a category he did not lead. Points goes through the same path even
+    # though the deck already answers it, so no card depends on that staying true.
+    #
+    # Top 12 rather than 10: the two views of each category are different lists, and a
+    # couple of rows spare means a tie at the bottom does not silently truncate one.
+    # Each row is [id, team, total, average, games played].
+    LEAD = {"pts": ("points", "avgPoints"), "ast": ("assists", "avgAssists"),
+            "reb": ("rebounds", "avgRebounds")}
+    leaders = {}
+    for key, (tot_k, avg_k) in LEAD.items():
+        rows = [[p["id"], p["team"], int(p["rs"].get(tot_k, 0)),
+                 r1(p["rs"].get(avg_k, 0)), int(p["rs"].get("gamesPlayed", 0))]
+                for p in deck]
+        leaders[key] = {
+            # Ties broken by the other measure, then by id, so the order is stable
+            # across rebuilds rather than riding on whatever sort() happened to do.
+            "tot": sorted(rows, key=lambda r: (-r[2], -r[3], r[0]))[:12],
+            "avg": sorted(rows, key=lambda r: (-r[3], -r[2], r[0]))[:12],
+        }
+
     champ = next((t["abbr"] for t in out_teams if t["po"] and t["po"]["outcome"] == "CHAMPIONS"), None)
 
     # Team-card rosters reference players by id; ship a lookup so they can show names
@@ -498,7 +524,7 @@ def main(label):
     payload = {
         "season": label, "champion": champ,
         "teams": out_teams, "players": out_players, "names": names,
-        "nights": nights, "tail": tail_order,
+        "nights": nights, "tail": tail_order, "leaders": leaders,
         "counts": {"teams": len(out_teams), "players": len(out_players),
                    "playerPool": len(deck)},
     }
