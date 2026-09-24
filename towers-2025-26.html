@@ -143,71 +143,167 @@ b{font-weight:700}
    and a semi-final no longer lined up between its two feeders. The flex column gives
    .brack a resolved height, and the rows can then actually be eighths of it. */
 body.bracket #wrap{display:flex;flex-direction:column}
-.brack{--gap:20px;display:grid;grid-template-columns:1fr minmax(150px,.72fr) 1fr;
+.brack{--gap:22px;display:grid;grid-template-columns:1fr minmax(230px,.74fr) 1fr;
   gap:var(--gap);flex:1 1 auto;min-height:520px}
-.brside{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap)}
+.brside{display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1fr) minmax(0,1.2fr);
+  gap:var(--gap)}
+.brside.r{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,.82fr)}
 /* Each series is placed on its own centre line rather than by grid spans: a series in
    round r is one of 8/2^(r+1) slots, and the centre of slot i is (i + .5) of that slot's
    share of the column. Stated once, it makes a semi-final land exactly between its two
    feeders by arithmetic instead of by hoping align-self and a row span agree -- which
    they did not, leaving every other box a row out of place. */
 .brcol{position:relative;min-width:0}
+/* Round by round the box gets twice the vertical room, so the crest grows into it. */
+.brcol.r0{--cr:min(5.6vh,2.6vw,50px)}
+.brcol.r1{--cr:min(7vh,3.1vw,62px)}
+.brcol.r2{--cr:min(8.4vh,3.7vw,74px)}
 .brcol > .ser{position:absolute;left:0;right:0;transform:translateY(-50%)}
 /* The connectors are the column's, not the boxes': a stub out to the gutter at each
    series' centre line, and one vertical joining each pair at the far edge of that
    gutter -- which is exactly where the next round's box begins. */
 .brstub,.brjoin{position:absolute;pointer-events:none}
-.brstub{width:var(--gap);border-top:1px solid rgba(150,166,205,.3)}
-.brjoin{border-left:1px solid rgba(150,166,205,.3)}
+.brstub{width:var(--gap);border-top:1.5px solid var(--c,rgba(150,166,205,.3));
+  box-shadow:0 0 9px -1px var(--c,transparent)}
+.brjoin{border-left:1.5px solid rgba(150,166,205,.22)}
 .brside.l .brstub,.brside.l .brjoin{right:calc(-1 * var(--gap))}
 .brside.r .brstub,.brside.r .brjoin{left:calc(-1 * var(--gap))}
 /* The Finals column is not a bracket column -- one series, centred, with the champion
    line under it. */
 .brfin{display:flex;flex-direction:column;justify-content:center;gap:10px;min-width:0}
-.brhd{display:grid;grid-template-columns:1fr minmax(150px,.72fr) 1fr;gap:var(--gap);
-  margin-bottom:9px}
-.brhd > div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap)}
-.brhd span{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);
+.brhd{display:grid;grid-template-columns:1fr minmax(230px,.74fr) 1fr;gap:var(--gap);
+  margin-bottom:14px}
+.brhd > div{display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1fr) minmax(0,1.2fr);
+  gap:var(--gap)}
+.brhd > div:last-child{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,.82fr)}
+.brhd span{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);
   text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.brhd .fin{color:var(--gold);font-weight:700}
+.brhd .fin{color:var(--gold);font-weight:700;font-size:12px;letter-spacing:.3em}
 
-.ser{position:relative;min-width:0;border-radius:10px;
-  border:1px solid var(--line);background:linear-gradient(180deg,#11151f,#0c1018);
-  padding:5px 6px 6px}
-/* The stub out to the next round, and the vertical that joins a pair. Only the upper
-   series of each pair draws the vertical, downward, so the two meet at the next
-   column's own edge -- where the next series' box already is. */
-.ser.fin{border-color:rgba(240,194,74,.45);
-  background:linear-gradient(180deg,#191506,#0c1018);padding:9px 10px 10px}
+/* A series is a confrontation, so every one of them is drawn as one -- two crests
+   facing each other with the score between, the winner in full colour and the loser
+   drained of his. Names were being cut to "T... 4" because a bracket column is narrow
+   and a long nickname is not; a crest needs no width to be recognised, which is what
+   lets the badge get big. The Finals is the same composition, four times the size. */
+.ser{position:relative;min-width:0;border-radius:14px;overflow:hidden;
+  border:1px solid var(--line);background:linear-gradient(180deg,#11151f,#0b0f16);
+  padding:11px 9px 12px;transition:transform .16s,box-shadow .16s,border-color .16s}
+.ser::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--c,var(--line))}
+.ser::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(85% 120% at var(--cx,50%) 100%,var(--c,transparent),transparent 70%);
+  opacity:.17}
+.ser:hover{transform:translateY(-2px);border-color:var(--c,var(--line));
+  box-shadow:0 12px 34px -10px var(--c,#000)}
+/* every series the champion played, so the road to the title can be traced across the
+   page without reading a single name */
+.ser.road{border-color:rgba(240,194,74,.38);
+  box-shadow:0 0 0 1px rgba(240,194,74,.16),0 10px 30px -16px rgba(240,194,74,.5)}
+.ser.road:hover{border-color:rgba(240,194,74,.75);
+  box-shadow:0 14px 38px -12px rgba(240,194,74,.55)}
+.brstub.road{border-top-width:2px;opacity:.95}
+.ser > *{position:relative;z-index:1}
 
+.duel{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:start;gap:5px}
+.dside{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
+.dside img{width:var(--cr);height:auto;aspect-ratio:1;max-width:100%;object-fit:contain;
+  filter:drop-shadow(0 4px 10px rgba(0,0,0,.65));transition:filter .2s,opacity .2s}
+.dside b{font-size:min(calc(var(--cr) * .26),15px);font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:100%;line-height:1.1;text-align:center}
+/* the seed, small enough to be a footnote and always there */
+.dside i{font-style:normal;font-size:min(calc(var(--cr) * .19),11px);color:var(--dim);
+  letter-spacing:.1em;line-height:1;opacity:.8}
+/* knocked out: the crest stays, so the tie is still readable, but the colour goes */
+.dside.out img{filter:grayscale(1) brightness(.72);opacity:.32}
+.dside.out b{color:var(--dim);font-weight:300;letter-spacing:.04em}
+.dsc{display:flex;align-items:baseline;gap:3px;font-variant-numeric:tabular-nums;
+  font-size:min(calc(var(--cr) * .66),40px);font-weight:700;line-height:1;padding-top:calc(var(--cr) * .2)}
+.dsc em{font-style:normal;font-size:.42em;color:var(--dim);font-weight:300}
+.dsc .l{color:var(--dim);font-weight:300}
+/* the games, as a row of bars in the colour of whoever took that night */
+.sgames{display:flex;gap:3px;margin-top:9px;flex-wrap:nowrap}
+.pog{flex:1 1 0;min-width:0;height:6px;border-radius:99px;cursor:default;
+  transition:height .14s}
+.ser:hover .pog{height:10px}
 
-.sline{display:flex;align-items:center;gap:6px;padding:3px 3px;border-radius:7px;
-  font-size:11.5px;min-width:0}
-.sline img{width:19px;height:19px;object-fit:contain;flex:0 0 auto;border-radius:50%;
-  background:rgba(232,236,245,.07)}
-.sline .sseed{flex:0 0 auto;font-size:8.5px;color:var(--dim);font-weight:700;width:11px;
-  text-align:right}
-.sline .snick{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis;color:var(--dim)}
-.sline em{flex:0 0 auto;font-style:normal;font-weight:700;color:var(--dim);
-  font-variant-numeric:tabular-nums}
-.sline.won{background:rgba(232,236,245,.055)}
-.sline.won .snick{color:var(--ink);font-weight:600}
-.sline.won em{color:var(--ink)}
-.ser.fin .sline{font-size:13px}
-.ser.fin .sline img{width:26px;height:26px}
-.sgames{display:flex;gap:2px;margin-top:5px;flex-wrap:nowrap}
-.pog{flex:1 1 0;min-width:0;height:13px;border-radius:3px;display:grid;place-items:center;
-  font-size:7.5px;font-weight:800;color:#07090f;font-style:normal;cursor:default}
+/* ---- the Finals: the same duel, given the room to shout ---- */
+.brfin{position:relative}
+.brfin::before{content:'';position:absolute;left:50%;top:50%;width:170%;height:150%;
+  transform:translate(-50%,-50%);pointer-events:none;
+  background:radial-gradient(closest-side,rgba(240,194,74,.14),transparent 72%)}
+.ser.fin{border-color:rgba(240,194,74,.42);border-radius:22px;
+  background:linear-gradient(180deg,#1b1608,#0b0f16 64%);padding:22px 20px 20px}
+.ser.fin::before{display:none}
+.ser.fin::after{background:radial-gradient(120% 95% at 50% 0%,rgba(240,194,74,.17),transparent 64%);
+  opacity:1}
+.ser.fin:hover{transform:none;box-shadow:0 20px 64px -22px rgba(240,194,74,.55)}
+.duel.fin{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.finkick{text-align:center;font-size:10px;letter-spacing:.34em;text-transform:uppercase;
+  color:var(--gold);font-weight:700;margin-bottom:12px;opacity:.9}
+.ser.fin .dsc{justify-content:center;margin-top:14px;padding-top:0}
+.ser.fin .dside b{font-size:clamp(11px,1.6vh,17px);letter-spacing:.16em}
+.ser.fin .dside i{font-size:clamp(8.5px,1.1vh,11px)}
+.ser.fin .dsc{font-size:clamp(30px,7.5vh,78px)}
+.ser.fin .sgames{margin-top:17px}
+.ser.fin .pog{height:9px}
+.ser.fin:hover .pog{height:13px}
+/* the champion line, in gold, under the stage */
+.brchamp{text-align:center;margin-top:15px}
+.brchamp .ttl{font-size:clamp(16px,2.8vh,28px);font-weight:700;letter-spacing:-.01em;
+  color:var(--gold);line-height:1.1}
+.brchamp .ring{display:inline-block;margin-right:9px;font-size:.62em;vertical-align:.16em;
+  opacity:.9}
+.brchamp .sub{font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);
+  margin-top:7px}
+
+/* the champion's crest, enormous and almost invisible, behind the whole bracket */
+.brwash{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(74vh,820px);height:min(74vh,820px);pointer-events:none;z-index:0;
+  opacity:.05;filter:grayscale(.15)}
+.brack{position:relative}
+.brack > *:not(.brwash){position:relative;z-index:1}
+
 .brnone{color:var(--dim);font-size:13px;padding:30px 4px}
 .brcap{font-size:10px;color:var(--dim);margin-top:10px;text-align:center}
 body.bracket #legend,body.bracket #ctlbar,body.bracket .towonly{display:none}
 body.bracket #wrap{bottom:0}
+/* Between a laptop and a phone the bracket still draws, but there is no width to spare:
+   the rounds go back to equal columns, the gutters tighten, and the middle gives up the
+   space it was using to make the Finals enormous. */
+@media (max-width:1200px){
+  .brack{--gap:14px;grid-template-columns:1fr minmax(180px,.5fr) 1fr}
+  .brhd{grid-template-columns:1fr minmax(180px,.5fr) 1fr}
+  .brside,.brside.r,.brhd > div,.brhd > div:last-child{
+    grid-template-columns:repeat(3,minmax(0,1fr))}
+  .brcol.r0{--cr:min(5.4vh,3.1vw,44px)}
+  .brcol.r1{--cr:min(6.6vh,3.5vw,52px)}
+  .brcol.r2{--cr:min(7.8vh,3.9vw,60px)}
+  .ser{padding:9px 6px 10px}
+  .dside b{letter-spacing:.03em}
+  .brhd span{font-size:9px;letter-spacing:.14em}
+}
 @media (max-width:900px){
-  .brack,.brhd{grid-template-columns:1fr;gap:12px}
-  .brside{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .brhd > div{display:none}
-  .ser::after,.ser.up::before{display:none}
+  /* A bracket needs width it does not have here, so the drawing gives way to the
+     reading order: conference, round, series, in normal flow. The absolute placement
+     that makes the connectors possible is exactly what collapses at this width -- four
+     series on one column's centre lines land on top of each other -- so it comes off. */
+  .brhd{display:none}
+  .brack{display:flex;flex-direction:column;gap:22px;min-height:0}
+  .brside,.brside.r{display:flex;flex-direction:column;gap:16px}
+  .brcol{display:flex;flex-direction:column;gap:10px}
+  .brcol > .ser{position:static!important;transform:none;top:auto!important}
+  .brstub,.brjoin{display:none}
+  .brside::before{content:attr(data-conf);font-size:11px;letter-spacing:.3em;
+    text-transform:uppercase;color:var(--ink);font-weight:700}
+  .brcol::before{content:attr(data-r);font-size:9.5px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--dim)}
+  .brcol.r0,.brcol.r1,.brcol.r2{--cr:min(15vw,62px)}
+  .brwash{width:min(46vh,340px);height:min(46vh,340px)}
+  .ser.fin{--cr:min(26vw,140px)}
+  .ser.fin .dsc{font-size:clamp(30px,11vw,52px)}
+  .brfin{order:-1}          /* the champion first: it is why you opened the page */
 }
 
 #tip{position:fixed;z-index:70;pointer-events:none;display:none;background:#0d1019;
@@ -630,6 +726,10 @@ function bracketHtml(){
   if (!R[0].length) return `<p class="brnone">No playoffs in ${esc(SEASON)} yet — the
     bracket fills in once the postseason is played.</p>`;
 
+  const FIN = R[3][0];
+  const CHAMP = FIN && (FIN.aw === 4 || FIN.bw === 4)
+    ? (FIN.aw > FIN.bw ? FIN.a : FIN.b) : null;
+
   // A fixed order, so the two sides do not swap between seasons.
   const sides = [['West', 'l'], ['East', 'r']].filter(c => R[0].some(s => s.a.conf === c[0]));
   const r1 = {}, slotOf = {};
@@ -644,67 +744,96 @@ function bracketHtml(){
     : Math.floor((slotOf[s.a.abbr] != null ? slotOf[s.a.abbr]
                                            : slotOf[s.b.abbr] || 0) / Math.pow(2, ri));
 
-  const line = (t, w, won) => `<div class="sline ${won ? 'won' : ''}">
-    <img src="${crest(t.abbr)}" alt="" loading="lazy">
-    <b class="sseed">${t.seed || ''}</b>
-    <span class="snick">${esc(t.nick)}</span><em>${w}</em></div>`;
-
   // The centre line of slot i in a round that has 8/span slots.
   const at = (slot, ri) => (slot + .5) * Math.pow(2, ri + 1) / 8 * 100;
-  const ser = (s, ri) => {
-    const si = BSER.push(s) - 1;
-    const fin = ri === 3, done = s.aw === 4 || s.bw === 4;
-    return `<div class="ser ${fin ? 'fin' : ''}" data-s="${si}"
-      style="${fin ? '' : `top:${at(slotFor(s, ri), ri).toFixed(3)}%`}">
-      ${line(s.a, s.aw, done && s.aw > s.bw)}
-      ${line(s.b, s.bw, done && s.bw > s.aw)}
-      <div class="sgames">${s.games.map((g, i) => {
-        const win = g.res === 'W' ? s.a : s.b;
-        return `<i class="pog" data-s="${si}" data-i="${i}"
-          style="background:${winColor(win)}">${i + 1}</i>`;
-      }).join('')}</div></div>`;
+  const winnerOf = s => s.aw === 4 || s.bw === 4 ? (s.aw > s.bw ? s.a : s.b) : null;
+  const pips = (s, si) => `<div class="sgames">${s.games.map((g, i) => {
+    const win = g.res === 'W' ? s.a : s.b;
+    return `<i class="pog" data-s="${si}" data-i="${i}"
+      style="background:${winColor(win)}"></i>`;
+  }).join('')}</div>`;
+
+  /* One composition for every round: the two crests facing, the score between them.
+     `fin` only adds the conference and seed under each name -- there is room for it
+     there and nowhere else. */
+  const duel = (s, fin) => {
+    const won = winnerOf(s);
+    const sideOf = t => `<div class="dside ${won && t !== won ? 'out' : ''}">
+      <img src="${crest(t.abbr)}" alt="" loading="lazy">
+      <b>${esc(fin ? t.nick : t.abbr)}</b>
+      <i>${fin ? `${esc(t.conf)} ${t.seed || ''} seed` : `${t.seed || ''}`}</i></div>`;
+    const score = `<div class="dsc"><span class="${won === s.b ? 'l' : ''}">${s.aw}</span>
+      <em>&ndash;</em><span class="${won === s.a ? 'l' : ''}">${s.bw}</span></div>`;
+    // In a column the score sits between the crests, because that is the only width
+    // there is. The Finals has the whole middle of the page: the two crests take it
+    // all and the score goes underneath, as big as a title card.
+    return fin
+      ? `<div class="finkick">NBA Finals</div>
+         <div class="duel fin">${sideOf(s.a)}${sideOf(s.b)}</div>${score}`
+      : `<div class="duel">${sideOf(s.a)}${score}${sideOf(s.b)}</div>`;
   };
 
+  const ser = (s, ri) => {
+    const si = BSER.push(s) - 1;
+    const won = winnerOf(s);
+    // the wash rises from under whichever crest won, so the box leans his way
+    const cx = won ? (won === s.a ? '16%' : '84%') : '50%';
+    const fin = ri === 3;
+    const road = CHAMP && !fin && (s.a === CHAMP || s.b === CHAMP);
+    return `<div class="ser ${fin ? 'fin' : ''} ${road ? 'road' : ''}" data-s="${si}"
+      style="${fin ? '--cr:min(17vh,9vw,188px)' : `top:${at(slotFor(s, ri), ri).toFixed(3)}%`
+        }${won ? `;--c:${winColor(won)};--cx:${cx}` : ''}">
+      ${duel(s, fin)}
+      ${pips(s, si)}</div>`;
+  };
+
+  const RN = ['1st Round', 'Semifinals', 'Conf. Finals'];
   const col = (list, ri) => {
     let deco = '';
     list.forEach(x => {
       const slot = slotFor(x, ri);
-      deco += `<i class="brstub" style="top:${at(slot, ri).toFixed(3)}%"></i>`;
+      const w = x.aw === 4 || x.bw === 4 ? (x.aw > x.bw ? x.a : x.b) : null;
+      const gold = CHAMP && (x.a === CHAMP || x.b === CHAMP);
+      deco += `<i class="brstub ${gold ? 'road' : ''}" style="top:${at(slot, ri).toFixed(3)}%${
+        w ? `;--c:${gold ? 'var(--gold)' : winColor(w)}` : ''}"></i>`;
       // The vertical joins a pair inside this column. The conference finals have no
       // partner here -- their pair IS the NBA Finals, on the other side of the page.
       if (ri < 2 && slot % 2 === 0)
         deco += `<i class="brjoin" style="top:${at(slot, ri).toFixed(3)}%;height:${
           (at(slot + 1, ri) - at(slot, ri)).toFixed(3)}%"></i>`;
     });
-    return `<div class="brcol">${deco}${list.map(x => ser(x, ri)).join('')}</div>`;
+    return `<div class="brcol r${ri}" data-r="${esc(RN[ri])}">${deco}${
+      list.map(x => ser(x, ri)).join('')}</div>`;
   };
   const side = ([conf, cls]) => {
     const cols = [0, 1, 2].map(ri =>
       col(ri === 0 ? r1[conf] : R[ri].filter(s => s.a.conf === conf), ri));
     // The right-hand side reads inward, so its rounds run the other way.
-    return `<div class="brside ${cls}">${
+    return `<div class="brside ${cls}" data-conf="${esc(conf)}">${
       (cls === 'r' ? cols.reverse() : cols).join('')}</div>`;
   };
 
-  const RN = ['1st Round', 'Semifinals', 'Conf. Finals'];
   const head = `<div class="brhd">
     <div>${RN.map(r => `<span>${r}</span>`).join('')}</div>
     <span class="fin">NBA Finals</span>
     <div>${[...RN].reverse().map(r => `<span>${r}</span>`).join('')}</div></div>`;
 
-  const finals = R[3][0];
-  const champ = finals && (finals.aw > finals.bw ? finals.a : finals.b);
+  const finals = FIN, champ = CHAMP;
   return head + `<div class="brack">
+    ${champ ? `<img class="brwash" src="${crest(champ.abbr)}" alt="">` : ''}
     ${sides[0] ? side(sides[0]) : '<div></div>'}
     <div class="brfin">
       ${finals ? ser(finals, 3) : ''}
-      ${champ ? `<div class="brcap" style="color:var(--gold)">★ ${esc(champ.name)} —
-        ${champ.w}-${champ.l}, ${esc(champ.conf)} ${champ.seed} seed</div>` : ''}
+      ${champ ? `<div class="brchamp">
+        <div class="ttl"><span class="ring">&#9679;</span>${esc(champ.name)}</div>
+        <div class="sub">${esc(SEASON)} champions &middot; ${champ.w}-${champ.l} &middot;
+          ${esc(champ.conf)} ${champ.seed} seed</div></div>` : ''}
     </div>
     ${sides[1] ? side(sides[1]) : '<div></div>'}
   </div>
-  <div class="brcap">Higher seed on top of each series · a game takes the colour of the
-    team that won it · hover a game for the score</div>`;
+  <div class="brcap">Higher seed on the left of each series · the beaten crest greys out ·
+    a game takes the colour of the team that won it${CHAMP
+      ? ' · the gold thread is the champion\u2019s road' : ''} · hover a game for the score</div>`;
 }
 
 /* ---------- which view ---------- */
