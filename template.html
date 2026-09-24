@@ -318,12 +318,17 @@ a{color:inherit}
   line-height:1.05;border-radius:4px;background:rgba(7,9,16,.62);
   border:1px solid rgba(255,255,255,.14);color:var(--ink);
   font-variant-numeric:tabular-nums;backdrop-filter:blur(3px)}
-.pmpills b.on{background:rgba(7,9,16,.74);border-color:var(--tc);color:#fff}
+/* The active category, ringed. The ring is inset rather than a thicker border so the
+   pills do not shift by a pixel when the tab changes. */
+.pmpills b.on{background:rgba(7,9,16,.86);border-color:var(--tc);color:#fff;
+  box-shadow:inset 0 0 0 1px var(--tc), 0 1px 10px -3px var(--tc)}
+.pmpills b.on i{opacity:.95;color:var(--tc)}
 .pmpills b i{display:block;margin-top:1px;font-style:normal;font-size:5.5px;
   font-weight:700;letter-spacing:.11em;text-transform:uppercase;opacity:.6}
 /* The season total sits opposite the jersey, top left -- the one number on the tile that
    is a season rather than a rate. */
 .pmtot{position:absolute;top:4px;left:5px;z-index:1;padding:2px 5px 3px;border-radius:4px;
+  white-space:nowrap;
   background:rgba(7,9,16,.55);border:1px solid rgba(255,255,255,.12);
   font-size:10px;font-weight:700;line-height:1.05;color:var(--ink);text-align:center;
   font-variant-numeric:tabular-nums;backdrop-filter:blur(3px)}
@@ -1584,9 +1589,10 @@ function teamCard(t){
   return teamBody(t, {roster, champ, cup, intl, po, rec});
 }
 
-/* Points, assists, rebounds -- that order again -- keyed to the per-game field each one
-   sorts by, which is the number the tile shows. */
-const ROSTKEY = [['pts', 'ppg'], ['ast', 'apg'], ['reb', 'rpg']];
+/* Points, assists, rebounds -- that order again -- each keyed to the per-game field it
+   sorts by and the season total that goes with it. Both numbers on a tile follow the
+   tab, so a tile never shows a points total under an "ast" heading. */
+const ROSTKEY = [['pts', 'ppg', 'pts'], ['ast', 'apg', 'ast'], ['reb', 'rpg', 'reb']];
 let ROSTBY = 'pts';
 function setRosterBy(k){
   if (k === ROSTBY) return;
@@ -1609,7 +1615,7 @@ function paintRoster(i){
 }
 
 function rosterDeck(t){
-  const key = (ROSTKEY.find(k => k[0] === ROSTBY) || ROSTKEY[0])[1];
+  const [, key, tot] = ROSTKEY.find(k => k[0] === ROSTBY) || ROSTKEY[0];
   // Ties keep the payload's own order, which is by points, so the tiles never shuffle
   // between two players who are level.
   const rows = t.roster.map((r, i) => [r, i])
@@ -1627,11 +1633,13 @@ function rosterDeck(t){
                  : k != null ? `onclick="goTail(${k});return false"`
                  : 'onclick="return false"';
         return `<a class="pmini" href="${at ? '#' + at : '#'}" ${go} style="--tc:${winColor(t)}"
-            title="${esc(nm[0])} · ${esc(nm[1])} · ${r.g} games · ${r.ppg} pts, ${r.apg} ast, ${r.rpg} reb">
+            title="${esc(nm[0])} · ${esc(nm[1])} · ${r.g} games · ${r.ppg} pts, ${
+              r.apg} ast, ${r.rpg} reb">
           <span class="pmshot"><i class="pmfb">${ini}</i><img src="${head(r.id)}" alt=""
             loading="lazy" onerror="this.style.display='none'">${nm[2]
               ? `<b class="pmwm">${esc(nm[2])}</b>` : ''}
-            <b class="pmtot">${r.pts.toLocaleString('en-US')}<i>total</i></b>
+            <b class="pmtot">${(r[tot] || 0).toLocaleString('en-US')}<i>${
+              ROSTBY} total</i></b>
             <span class="pmpills">${ROSTKEY.map(k =>
               `<b class="${k[0] === ROSTBY ? 'on' : ''}">${r[k[1]]}<i>${k[0]}</i></b>`
               ).join('')}</span></span>

@@ -324,7 +324,12 @@ def main(label):
             if ab not in byteam:
                 continue
             gp, pts, reb, ast, mins, tpm = byteam[ab]
-            roster.append({"id": pid, "g": gp, "pts": pts,
+            # Season totals for all three, not just points: the tile's headline number
+            # follows whichever category the roster is sorted by, so it needs the
+            # matching total or it would show a points figure under an "ast" heading.
+            # These are HIS TOTALS FOR THIS TEAM, which is the right scope for a roster
+            # -- a traded player's line here is the part of his season he spent here.
+            roster.append({"id": pid, "g": gp, "pts": pts, "ast": ast, "reb": reb,
                            "ppg": r1(pts / gp), "rpg": r1(reb / gp),
                            "apg": r1(ast / gp), "mpg": r1(mins / gp)})
         roster.sort(key=lambda r: -r["ppg"])
