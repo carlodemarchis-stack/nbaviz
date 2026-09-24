@@ -596,15 +596,6 @@ a{color:inherit}
 .mod{position:fixed;inset:0;z-index:60;background:rgba(4,6,12,.82);
   backdrop-filter:blur(7px);display:none;place-items:center;padding:22px}
 .mod.on{display:grid}
-/* The overlay is a card, so it gets a card's shape rather than the prose box the other
-   modals use. Height is capped to the viewport because playerCard() expects to fill one. */
-.pbox{position:relative;width:min(1520px,96vw);height:min(86vh,900px);background:#0b0e16;
-  border:1px solid var(--line);border-radius:20px;padding:16px 18px}
-.pbox #pbody{height:100%}
-.pclose{position:absolute;top:-13px;right:-9px;z-index:2;width:30px;height:30px;
-  border-radius:50%;border:1px solid var(--line);background:#161a26;color:var(--ink);
-  font-size:17px;line-height:1;cursor:pointer}
-.pclose:hover{background:#222836}
 /* A roster row that leads somewhere says so on hover, like any other cross-link. */
 .rrow .xl{border-bottom:none}
 .rrow:hover .xl{border-bottom:1px dotted currentColor}
@@ -677,8 +668,6 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
   .rankno b{font-size:min(41cqh, var(--rw, 23cqw))}
   .rankno em{font-size:min(9cqh, 6cqw)}
   /* Hanging the close button outside the box puts it off the right edge of a phone. */
-  .pbox{width:96vw;height:92vh;padding:14px 12px}
-  .pclose{top:7px;right:7px}
 }
 </style>
 </head>
@@ -736,6 +725,11 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
         so availability counts as well as scoring.</li>
       <li>The <b>shot chart</b> bins every shot he took into 1.6ft cells: the dot is
         bigger where he shot more often, and warmer where more of them went in.</li>
+      <li><b>Unlisted cards</b> — only the 100 leading scorers are in the reel, but
+        everyone who played has a card. They carry on from no. 100 in the same scoring
+        order and sit past the end of the deck, so the arrows never wander into them:
+        open one from a roster tile, from his name anywhere in the film, by searching
+        it, or by its number in the address bar.</li>
       <li>The <b>NBA Cup Championship</b> does not count toward a team's record, so it
         sits outside the W-L but is marked on the card.</li>
     </ul>
@@ -744,14 +738,6 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
       <kbd>f</kbd> fullscreen · <kbd>h</kbd> help · <kbd>Esc</kbd> close.
       Swipe on a touch screen.</p>
   </div>
-</div>
-
-<!-- A player outside the carded 100, opened from a roster row. His record is fetched
-     from his team's own roster file the first time one is asked for, then cached, so the
-     film's deck and page weight are untouched. Rendered by playerCard() verbatim. -->
-<div class="mod" id="pmodal" onclick="if(event.target===this)closeMods()">
-  <div class="pbox"><button class="pclose" onclick="closeMods()" title="Close (Esc)">×</button>
-    <div id="pbody"></div></div>
 </div>
 
 <div class="mod" id="cmodal" onclick="if(event.target===this)closeMods()">
@@ -862,16 +848,35 @@ const CARDS = [{kind:'cover'}]
 /* A section with nothing in it gets no pill -- 2026-27 ships with no players at all. */
 const secSlug = n => String(n).toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
+/* ---------- the unlisted cards ----------
+   Everyone who played but missed the carded 100 has a card too, and it is a real card in
+   the film rather than an overlay on top of it. It is UNLISTED: the reel you scroll is
+   unchanged, so stepping off the last player card still lands on the charts, and nothing
+   walks you into the tail by accident. You get there by deep link -- a roster tile, a
+   name anywhere in the deck, a number in the URL -- and the numbering continues the
+   scoring order, so the card after no. 100 is no. 101 even though no arrow key connects
+   the two.
+
+   ONE <section> at the end of the film is re-used for whichever one is open. 391 extra
+   cards in the DOM is the thing that made them an overlay in the first place -- it would
+   have taken the deck from 80,000 nodes to some 400,000 -- and this costs 391 rows of
+   [id, team] instead. */
+const TAIL = D.tail || [];
+const TAIL_OF = {};
+TAIL.forEach((r, k) => { TAIL_OF[r[0]] = k; });
+
 /* Cross-links. A team name anywhere jumps to that franchise's card, a player name to his.
-   Built from CARDS so the indices cannot drift from the deck order. A roster lists
-   everyone who played, but only the top 100 have cards -- plink() hands back plain text
-   for the rest rather than a link that goes nowhere. */
+   Built from CARDS so the indices cannot drift from the deck order. Every player who
+   played has somewhere to go now: the carded 100 to their card in the deck, the other
+   391 to their unlisted one. */
 const CARD_OF_TEAM = {}, CARD_OF_PLAYER = {};
 const xlink = (i, html) => i == null
   ? html
   : `<a class="xl" href="#${i + 1}" onclick="closeMods();go(${i});return false">${html}</a>`;
 const tlink = (ab, html) => xlink(CARD_OF_TEAM[ab], html);
-const plink = (id, html) => xlink(CARD_OF_PLAYER[id], html);
+const plink = (id, html) => CARD_OF_PLAYER[id] != null ? xlink(CARD_OF_PLAYER[id], html)
+  : TAIL_OF[id] != null ? tailLink(TAIL_OF[id], html)
+  : html;
 
 const SECTIONS = [
   ['Players',      1, D.players.length],
@@ -1483,11 +1488,15 @@ function teamCard(t){
       <div class="rdeck">${t.roster.slice(0, 18).map(r => {
         const nm = NAMES[r.id] || ['—', '', ''];
         const ini = esc(nm[0]).split(' ').map(w => w[0] || '').join('').slice(0, 2);
-        const carded = CARD_OF_PLAYER[r.id] != null;
-        const go = carded
-          ? `onclick="go(${CARD_OF_PLAYER[r.id]});return false"`
-          : `onclick="openRoster('${t.abbr}','${r.id}');return false"`;
-        return `<a class="pmini" href="#" ${go} style="--tc:${winColor(t)}"
+        // Both go to a card; the difference is only whether it is in the deck or is
+        // the unlisted one at the end of the film. href carries the number either way,
+        // so the link can be copied or opened in a new tab like any other.
+        const deck = CARD_OF_PLAYER[r.id], k = TAIL_OF[r.id];
+        const at = deck != null ? deck + 1 : k != null ? CARDS.length + k + 1 : null;
+        const go = deck != null ? `onclick="go(${deck});return false"`
+                 : k != null ? `onclick="goTail(${k});return false"`
+                 : 'onclick="return false"';
+        return `<a class="pmini" href="${at ? '#' + at : '#'}" ${go} style="--tc:${winColor(t)}"
             title="${esc(nm[0])} · ${esc(nm[1])} · ${r.g} games · ${r.ppg} pts, ${r.rpg} reb, ${r.apg} ast">
           <span class="pmshot"><i class="pmfb">${ini}</i><img src="${head(r.id)}" alt=""
             loading="lazy" onerror="this.style.display='none'">${nm[2]
@@ -1892,7 +1901,9 @@ document.getElementById('pills').innerHTML =
 
 document.getElementById('cnote').textContent =
   `${D.counts.teams} team cards · ${D.counts.players} player cards drawn from a pool of ` +
-  `${D.counts.playerPool} players who scored in ${SEASON}.`;
+  `${D.counts.playerPool} players who scored in ${SEASON}.` +
+  (TAIL.length ? ` The other ${TAIL.length} have an unlisted card, opened from a roster
+    tile or by its number.`.replace(/\s+/g, ' ') : '');
 
 /* Every page is written season-suffixed, so all cross-links can be built from the
    season name alone; index.html / towers.html are copies of the default season. */
@@ -1984,6 +1995,22 @@ function updateSocialMeta(){
 const cards = [...film.children];
 let cur = 0, playing = null;
 
+/* The unlisted card. Appended AFTER `cards` is taken, so the deck array stays exactly
+   the listed cards and every index in it still means what it meant. Hidden when unused,
+   which takes it out of the scroll container entirely -- so the reel really does end at
+   the last listed card, rather than having a blank 31st team card hanging off it. */
+const TOTAL = CARDS.length + TAIL.length;
+let UCUR = -1, UP = null;         // which unlisted card is showing, and his record
+const ucard = document.createElement('section');
+ucard.className = 'card';
+ucard.id = 'ucard';
+ucard.hidden = true;
+film.appendChild(ucard);
+function tailLink(k, html){
+  return `<a class="xl" href="#${CARDS.length + k + 1}"
+    onclick="closeMods();goTail(${k});return false">${html}</a>`;
+}
+
 /* ---------- hover detail ---------- */
 /* Two charts want the same panel: the biggest-nights card (one element per column) and
    every player's game chart (a single stretched svg, so the column is worked out from
@@ -2006,12 +2033,12 @@ function setMetric(m){
   if (!METRICS[m]) return;
   METRIC = m;
   try { localStorage.setItem('nba.metric', m); } catch(e) {}
-  paintLog(cur); paintOverlayLog();
+  paintLog(cur);
 }
 function setLogMode(d){
   LOGMODE = d;
   try { localStorage.setItem('nba.logmode', d); } catch(e) {}
-  paintLog(cur); paintOverlayLog();
+  paintLog(cur);
 }
 function togglePo(){
   POON = !POON;
@@ -2021,12 +2048,13 @@ function togglePo(){
 /* Re-rendering all 100 charts on every switch is wasteful, so a card is brought up to
    date when you land on it. paint() calls this. */
 function paintLog(i){
-  const c = CARDS[i];
-  if (!c || c.kind !== 'player') return;
-  const el = cards[i] && cards[i].querySelector('.logwrap');
+  const host = UCUR >= 0 ? ucard : cards[i];
+  const p = UCUR >= 0 ? UP : (CARDS[i] || {}).p;
+  if (!p || !host) return;
+  const el = host.querySelector('.logwrap');
   const want = METRIC + ':' + LOGMODE + ':' + (POON ? 'po' : 'rs');
   if (!el || el.dataset.metric === want) return;
-  el.innerHTML = logPanel(c.p, METRIC);
+  el.innerHTML = logPanel(p, METRIC);
   el.dataset.metric = want;
   clearHl();
   hideTip();
@@ -2100,14 +2128,13 @@ function logHover(e, box){
 }
 
 film.addEventListener('mousemove', onHover);
-document.getElementById('pmodal').addEventListener('mousemove', onHover);
 film.addEventListener('mouseleave', () => { clearHl(); hideTip(); });
 /* Touch has no hover: a tap on a column shows its panel, the next tap elsewhere hides it. */
 film.addEventListener('click', e => {
   const col = e.target.closest('.nb');
   if (col && matchMedia('(hover: hover)').matches){
-    const i = CARD_OF_PLAYER[(D.nights[+col.dataset.night] || {}).id];
-    if (i != null){ hideTip(); clearHl(); return go(i); }
+    const id = (D.nights[+col.dataset.night] || {}).id;
+    if (id != null){ hideTip(); clearHl(); return goPlayer(id); }
   }
   if (col || e.target.closest('.loghook')) onHover(e);
   else { clearHl(); hideTip(); }
@@ -2115,6 +2142,8 @@ film.addEventListener('click', e => {
 
 
 function label(i){
+  if (UCUR >= 0) return UP ? `${UP.name} · no. ${UP.rank}`
+                           : (NAMES[TAIL[UCUR][0]] || ['\u2014'])[0];
   const c = CARDS[i];
   if (c.kind === 'cover') return 'Cover';
   if (c.kind === 'team') return c.t.name;
@@ -2131,8 +2160,11 @@ function paint(){
   const c = CARDS[cur];
   document.getElementById('ctx').innerHTML =
     `NBA ${esc(SEASON)} · <b>${esc(label(cur))}</b>`;
-  document.getElementById('counter').innerHTML = `<b>${cur+1}</b> / ${CARDS.length}`;
-  const s = section(cur);
+  document.getElementById('counter').innerHTML = UCUR >= 0
+    ? `<b>${cur+1}</b> / ${TOTAL} <span style="color:var(--dim)">unlisted</span>`
+    : `<b>${cur+1}</b> / ${CARDS.length}`;
+  // No section owns the tail, so no pill lights up there.
+  const s = UCUR >= 0 ? -1 : section(cur);
   // Scoped to #pills on purpose: the top bar also holds the Film/Towers toggle and the
   // season pills, and an unscoped '.pill' lit those up by index instead -- the Film page
   // ended up highlighting "Towers".
@@ -2145,19 +2177,83 @@ function paint(){
   updateSocialMeta();
 }
 function go(i, smooth = true){
+  // Leaving the tail hides its card, which is why nothing in the deck has to know it
+  // exists: with it hidden the film is the deck again, offsets and all.
+  if (UCUR >= 0){ UCUR = -1; UP = null; ucard.hidden = true; }
   cur = Math.max(0, Math.min(CARDS.length - 1, i));
   // 'auto' defers to CSS scroll-behavior, which is smooth here -- so an intended
   // instant jump would animate across every card in between. 'instant' is the real one.
   film.scrollTo({left: cards[cur].offsetLeft, behavior: smooth ? 'smooth' : 'instant'});
   paint();
 }
-function step(d){ go(cur + d); }
+function step(d){
+  // Inside the tail the arrows walk the tail, in scoring order. Back off the front of
+  // it returns to the deck; there is no way in from that side, which is the point.
+  if (UCUR >= 0){
+    if (UCUR + d < 0) return go(CARDS.length - 1);
+    if (UCUR + d < TAIL.length) return goTail(UCUR + d);
+    return;
+  }
+  go(cur + d);
+}
+
+/* Whichever kind of card this player has. Everything that jumps to a player goes
+   through here rather than through CARD_OF_PLAYER, so a roster tile, a cross-link and
+   a chart column all behave the same. */
+function goPlayer(id){
+  const i = CARD_OF_PLAYER[id];
+  if (i != null) return go(i);
+  const k = TAIL_OF[id];
+  if (k != null) return goTail(k);
+}
+
+async function goTail(k){
+  if (!TAIL.length) return;
+  k = Math.max(0, Math.min(TAIL.length - 1, k));
+  const [id, ab] = TAIL[k];
+  UCUR = k; UP = null; cur = CARDS.length + k;
+  ucard.hidden = false;
+  ucard.innerHTML = `<div class="in"><p style="color:var(--dim);font-size:13px">
+    Loading ${esc((NAMES[id] || ['this player'])[0])}\u2026</p></div>`;
+  // Always instant: reaching an unlisted card is a jump from anywhere in the film, and
+  // stepping within the tail re-uses this same element, so there is nothing to animate.
+  film.scrollTo({left: ucard.offsetLeft, behavior: 'instant'});
+  paint();
+  try {
+    const p = (await rosterOf(ab))[id];
+    if (!p) throw 'missing';
+    if (UCUR !== k) return;            // moved on while the fetch was in the air
+    UP = p;
+    ucard.innerHTML = playerCard(p);
+    paint();
+  } catch(e) {
+    if (UCUR !== k) return;
+    // Opened from a file:// URL the fetch is blocked outright, so say what happened
+    // rather than leaving a spinner that never resolves.
+    ucard.innerHTML = `<div class="in"><h2 style="font-size:20px;font-weight:700">
+      ${esc((NAMES[id] || ['this player'])[0])}</h2>
+      <p style="font-size:12px;color:var(--dim);max-width:60ch">His card could not be
+      loaded. The cards outside the top 100 are fetched on demand, which needs the page
+      to be served over http \u2014 opened straight from disk, the browser blocks it.</p>
+      </div>`;
+  }
+}
 
 let sT;
 film.addEventListener('scroll', () => {
   clearTimeout(sT);
   sT = setTimeout(() => {
+    // This handler is here to catch the user scrolling. A programmatic jump also fires
+    // scroll events, and a smooth one over a long distance can go quiet for longer than
+    // the debounce mid-flight -- which read the half-way position as a destination and
+    // bounced a jump into the tail straight back out of it. If we are where we last
+    // asked to be, there is nothing to catch up with.
+    const want = UCUR >= 0 ? ucard.offsetLeft : cards[cur].offsetLeft;
+    if (Math.abs(film.scrollLeft - want) < 4) return;
     const i = Math.round(film.scrollLeft / film.clientWidth);
+    // Swiping off the unlisted card and back onto the deck leaves the tail, which is
+    // the one case where the scroll position, not a call, decides where you are.
+    if (UCUR >= 0) { if (i < CARDS.length) go(i, false); return; }
     if (i !== cur) { cur = i; paint(); }
   }, 90);
 });
@@ -2182,51 +2278,24 @@ function fs(){
    for the session. Per team rather than one bundle: a ~20 KB fetch scoped to the card
    already on screen beats a 700 KB fetch on the first click anywhere. */
 const ROSTER = {};
-let POPEN = null;                       // the player the overlay is showing, if any
 async function rosterOf(ab){
   if (!ROSTER[ab]) ROSTER[ab] = fetch(`data/roster/${SEASON}-${ab}.json`)
     .then(r => r.ok ? r.json() : Promise.reject(r.status));
   return ROSTER[ab];
 }
-async function openRoster(ab, id){
-  const body = document.getElementById('pbody');
-  body.innerHTML = '<div class="in"><p style="color:var(--dim)">Loading…</p></div>';
-  openMod('pmodal');
-  try {
-    const p = (await rosterOf(ab))[id];
-    if (!p) throw 'missing';
-    POPEN = p;
-    body.innerHTML = playerCard(p);
-  } catch(e) {
-    // Opened from a file:// URL a fetch is blocked outright, so say what happened
-    // rather than leaving a spinner that never resolves.
-    body.innerHTML = `<div class="in"><h2 style="font-size:20px;font-weight:700">
-      ${esc((NAMES[id] || ['this player'])[0])}</h2>
-      <p style="font-size:12px;color:var(--dim);max-width:60ch">His card could not be
-      loaded. Cards outside the top 100 are fetched on demand, which needs the page to be
-      served over http — opened straight from disk, the browser blocks it.</p></div>`;
-  }
-}
-
 function openMod(id){ closeMods(); document.getElementById(id).classList.add('on'); }
 function closeMods(){
   document.querySelectorAll('.mod').forEach(m => m.classList.remove('on'));
-  POPEN = null; hideTip(); clearHl();
+  hideTip(); clearHl();
 }
 
-/* The overlay is not one of the deck's cards, so anything that resolves "which player is
-   this chart about" has to know about it. */
+/* "Which player is this chart about" -- the unlisted card is not in CARDS, so it
+   answers for itself. */
 function playerAt(el){
-  if (el.closest('#pbody')) return POPEN;
   const card = el.closest('.card');
-  return card ? (CARDS[cards.indexOf(card)] || {}).p : null;
-}
-/* The metric tabs and the Split/Avg switch repaint the card you are on; when the overlay
-   is open, that is the overlay. */
-function paintOverlayLog(){
-  if (!POPEN) return;
-  const el = document.querySelector('#pbody .logwrap');
-  if (el) el.innerHTML = logPanel(POPEN, METRIC);
+  if (!card) return null;
+  if (card === ucard) return UP;
+  return (CARDS[cards.indexOf(card)] || {}).p;
 }
 
 /* ---------- jump ---------- */
@@ -2249,14 +2318,24 @@ const INDEX = CARDS.map((c,i) => {
               : TCHARTS.includes(c.kind) ? 'Team stats' : 'Player stats';
   return {i, group, label: short || label(i), sub, key: s.toLowerCase()};
 });
-const JGROUPS = ['Start', 'Players', 'Player stats', 'Teams', 'Team stats'];
+/* The unlisted cards are in the jump box too -- typing a name IS a deep link, and it is
+   the only way to reach one without already being on his team's card. They are kept out
+   of the panel's blank state, though: 391 rows would bury the 135 that are the film. */
+const TINDEX = TAIL.map((r, k) => {
+  const nm = NAMES[r[0]] || ['\u2014', ''];
+  return {i: CARDS.length + k, k, group: 'Roster', label: nm[0],
+          sub: `${r[1]}${nm[1] ? ' · ' + nm[1] : ''}`,
+          key: [nm[0], r[1], 'roster unlisted'].join(' ').toLowerCase()};
+});
+const JGROUPS = ['Start', 'Players', 'Player stats', 'Teams', 'Team stats', 'Roster'];
 let jsel = 0;
 function drawJump(q){
   q = q.trim().toLowerCase();
   const n = parseInt(q, 10);
+  const all = INDEX.concat(TINDEX);
   const rows = !q ? INDEX
-    : (String(n) === q && n >= 1 && n <= CARDS.length) ? [INDEX[n-1]]
-    : INDEX.filter(r => q.split(/\s+/).every(w => r.key.includes(w)));
+    : (String(n) === q && n >= 1 && n <= TOTAL) ? [all[n-1]]
+    : all.filter(r => q.split(/\s+/).every(w => r.key.includes(w)));
   jsel = 0;
   // Grouped and multi-column: 134 cards in one flat list is a scroll, and the groups
   // are how you actually think about the deck. Rows stay in INDEX order inside each
@@ -2268,7 +2347,7 @@ function drawJump(q){
     html += `<div class="jsec"><div class="jsechd">${g}
       <span>${inGroup.length}</span></div><div class="jgrid">`
       + inGroup.map(r => `<div class="jrow ${k++ === 0 ? 'sel' : ''}" data-i="${r.i}"
-          onclick="go(${r.i});closeMods()">
+          onclick="${r.k != null ? `goTail(${r.k})` : `go(${r.i})`};closeMods()">
           <span class="jn">${r.i+1}</span>
           <span class="jl">${esc(r.label)}<span class="jt">${esc(r.sub)}</span></span>
         </div>`).join('')
@@ -2292,7 +2371,7 @@ document.getElementById('jq').addEventListener('keydown', e => {
     rows[jsel].scrollIntoView({block:'nearest'});
   } else if (e.key === 'Enter'){
     e.preventDefault();
-    go(+rows[jsel].dataset.i); closeMods();
+    rows[jsel].click();            // the row already knows which kind of card it is
   }
 });
 
@@ -2321,7 +2400,7 @@ film.addEventListener('touchend', e => {
 /* ---------- open where we left off ---------- */
 /* Standing rule across these apps: a reload lands where you were, never card 1. */
 (function start(){
-  let i = 0;
+  let i = 0, k = -1;
   const raw = decodeURIComponent(location.hash.replace('#', ''));
   const h = parseInt(raw, 10);
   // A section can be linked by name -- index-2025-26.html#players -- so the towers page
@@ -2329,10 +2408,16 @@ film.addEventListener('touchend', e => {
   const named = SECTIONS.find(x => secSlug(x.name) === raw.toLowerCase());
   if (named) i = named.at;
   else if (h >= 1 && h <= CARDS.length) i = h - 1;
-  else { try { const s = +localStorage.getItem('nba.card'); if (s >= 0 && s < CARDS.length) i = s; }
+  // Past the deck is the tail: #236 is an unlisted card, and it is the only way in.
+  else if (h > CARDS.length && h <= TOTAL) k = h - CARDS.length - 1;
+  else { try { const s = +localStorage.getItem('nba.card');
+               if (s >= 0 && s < CARDS.length) i = s;
+               else if (s >= CARDS.length && s < TOTAL) k = s - CARDS.length; }
          catch(e){} }
-  go(i, false);
-  addEventListener('resize', () => go(cur, false));
+  k >= 0 ? goTail(k) : go(i, false);
+  addEventListener('resize', () => UCUR >= 0
+    ? film.scrollTo({left: ucard.offsetLeft, behavior: 'instant'})
+    : go(cur, false));
 })();
 </script>
 </body>

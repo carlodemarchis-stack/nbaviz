@@ -454,10 +454,11 @@ def main(label):
         out_players.append(player_record(p))
 
     # --- the tail: everyone who played but is outside the carded 100.
-    # These do NOT join the film -- the deck stays at its 135 cards -- they are fetched
-    # per team when a roster row is clicked, so the page weight and the node count are
-    # untouched. One file per team rather than one bundle: a 21 KB fetch scoped to the
-    # team already on screen beats a 640 KB fetch on the first click anywhere.
+    # These are the film's UNLISTED cards. They are not in the deck -- it stays at its
+    # 135 -- and no arrow key walks into them; they are reached by deep link only, and
+    # the page fetches one team's file the first time a card on it is asked for. One
+    # file per team rather than one bundle: a 21 KB fetch scoped to the team already on
+    # screen beats a 640 KB fetch on the first click anywhere.
     carded = {p["id"] for p in deck[:PLAYER_CARDS]}
     by_id = {p["id"]: p for p in deck}
     tails, rows = {}, 0
@@ -467,6 +468,19 @@ def main(label):
         if ids:
             tails[t["abbr"]] = {by_id[i]["id"]: player_record(by_id[i], with_shots=False)
                                 for i in ids}
+
+    # The order the unlisted cards sit in, and which file each is fetched from. It rides
+    # in the payload rather than being re-derived in the browser so a card's number is
+    # exactly its place in the scoring order -- deck order is by points with a tiebreak
+    # the page cannot see, and re-sorting there would quietly renumber ties.
+    #
+    # A traded player appears on two rosters with an identical whole-season record in
+    # both files, so the first team is as good as the second and he gets ONE card.
+    home = {}
+    for t in out_teams:
+        for r in t["roster"]:
+            home.setdefault(r["id"], t["abbr"])
+    tail_order = [[p["id"], home[p["id"]]] for p in deck[PLAYER_CARDS:] if p["id"] in home]
 
     champ = next((t["abbr"] for t in out_teams if t["po"] and t["po"]["outcome"] == "CHAMPIONS"), None)
 
@@ -484,7 +498,7 @@ def main(label):
     payload = {
         "season": label, "champion": champ,
         "teams": out_teams, "players": out_players, "names": names,
-        "nights": nights,
+        "nights": nights, "tail": tail_order,
         "counts": {"teams": len(out_teams), "players": len(out_players),
                    "playerPool": len(deck)},
     }
