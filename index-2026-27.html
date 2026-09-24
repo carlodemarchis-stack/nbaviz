@@ -287,7 +287,9 @@ a{color:inherit}
 /* --- squad deck: 18 players as 6 x 3 mini cards ------------------------------- */
 .rhd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;
   font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
-.rhd .rhk{font-size:8.5px;opacity:.7;letter-spacing:.06em}
+.rhd .rhk{font-size:8.5px;opacity:.7;letter-spacing:.06em;align-self:center}
+.rhd .ltabs{align-items:center;gap:2px}
+.rhd .ltab{padding:2px 7px;font-size:8.5px}
 .rdeck{flex:1 1 auto;min-height:0;display:grid;gap:7px;
   grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr))}
 .pmini{position:relative;display:flex;flex-direction:column;min-height:0;overflow:hidden;
@@ -316,7 +318,7 @@ a{color:inherit}
   line-height:1.05;border-radius:4px;background:rgba(7,9,16,.62);
   border:1px solid rgba(255,255,255,.14);color:var(--ink);
   font-variant-numeric:tabular-nums;backdrop-filter:blur(3px)}
-.pmpills b:first-child{background:rgba(7,9,16,.74);border-color:var(--tc);color:#fff}
+.pmpills b.on{background:rgba(7,9,16,.74);border-color:var(--tc);color:#fff}
 .pmpills b i{display:block;margin-top:1px;font-style:normal;font-size:5.5px;
   font-weight:700;letter-spacing:.11em;text-transform:uppercase;opacity:.6}
 /* The season total sits opposite the jersey, top left -- the one number on the tile that
@@ -593,7 +595,11 @@ a{color:inherit}
 }
 .rval i{display:block;margin-top:4px;font-style:normal;font-weight:700;font-size:8px;
   letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.6);
-  -webkit-text-stroke:0}
+  -webkit-text-stroke:0;white-space:nowrap}
+/* Two numbers on the line instead of one, so it gets its own budget: "34 · 55" is seven
+   characters where "55" is two, and at the single-number size it runs past the column. */
+.rval.two{font-size:clamp(11px,1.5vw,22px)}
+.rval.two em{font-style:normal;margin:0 .2em;opacity:.5}
 .rfoot img{width:100%;display:block}
 /* The rank sits just above the player, so the two read as one object at the foot of the
    bar. Clear of him, not tucked into him: these cutouts have almost no transparent
@@ -606,8 +612,17 @@ a{color:inherit}
 /* Sized to the column, not the window: ten of these narrow as the card does, and every
    one is bounded by its own bar's height so a short column shrinks rather than collides. */
 @supports (container-type: size){
-  .rval{font-size:min(27cqw, 34px, 15cqh)}
+  .rval{font-size:max(10px, min(27cqw, 34px, 15cqh))}
   .rval i{font-size:min(8px, 3.5cqh)}
+  .rval.two{font-size:max(10px, min(17cqw, 22px, 11cqh))}
+  .rval.two i{font-size:min(8px, 5.2cqw, 3.5cqh)}
+  /* Below this the number would be shrinking past legibility to make room for its own
+     caption and rank -- Banchero's three triples against Jokić's 34 is a 47px column.
+     So the furniture goes instead and the number holds at 10px: the player is still
+     there, and the name and the full line are in the caption underneath either way. */
+  @container (max-height: 140px){
+    .rval i, .rrk{display:none}
+  }
   .rrk{font-size:min(46cqw, 62px, 22cqh)}
   .rfoot img{width:min(100%, 48cqh)}
 }
@@ -1560,8 +1575,47 @@ function teamCard(t){
      everyone else opens the lazy-loaded one from data/roster/. */
   const roster = t.roster.length ? `<div class="rost panel" style="padding:11px 12px">
       <div class="rhd"><span>Who played</span>
-        <span class="rhk">pts · ast · reb per game</span></div>
-      <div class="rdeck">${t.roster.slice(0, 18).map(r => {
+        <span class="ltabs">${ROSTKEY.map(k =>
+          `<button class="ltab ${k[0] === ROSTBY ? 'on' : ''}"
+            onclick="setRosterBy('${k[0]}')">${k[0]}</button>`).join('')}
+          <span class="rhk">per game</span></span></div>
+      ${rosterDeck(t)}</div>` : '';
+
+  return teamBody(t, {roster, champ, cup, intl, po, rec});
+}
+
+/* Points, assists, rebounds -- that order again -- keyed to the per-game field each one
+   sorts by, which is the number the tile shows. */
+const ROSTKEY = [['pts', 'ppg'], ['ast', 'apg'], ['reb', 'rpg']];
+let ROSTBY = 'pts';
+function setRosterBy(k){
+  if (k === ROSTBY) return;
+  ROSTBY = k;
+  paintRoster(cur);
+}
+/* Every team card carries a roster, so re-sorting one means the other 29 are now stale.
+   Rather than rebuild all thirty on a click, each deck records what it was sorted by and
+   paint() brings the card you are looking at up to date -- the same trick the game chart
+   uses for its metric tabs. */
+function paintRoster(i){
+  const c = CARDS[i];
+  if (!c || c.kind !== 'team' || !cards[i]) return;
+  const el = cards[i].querySelector('.rdeck');
+  if (!el || el.dataset.by === ROSTBY) return;
+  el.outerHTML = rosterDeck(c.t);
+  const hd = cards[i].querySelector('.rhd .ltabs');
+  if (hd) hd.querySelectorAll('.ltab').forEach(b =>
+    b.classList.toggle('on', b.textContent.trim() === ROSTBY));
+}
+
+function rosterDeck(t){
+  const key = (ROSTKEY.find(k => k[0] === ROSTBY) || ROSTKEY[0])[1];
+  // Ties keep the payload's own order, which is by points, so the tiles never shuffle
+  // between two players who are level.
+  const rows = t.roster.map((r, i) => [r, i])
+    .sort((a, b) => (b[0][key] || 0) - (a[0][key] || 0) || a[1] - b[1])
+    .map(x => x[0]);
+  return `<div class="rdeck" data-by="${ROSTBY}">${rows.slice(0, 18).map(r => {
         const nm = NAMES[r.id] || ['—', '', ''];
         const ini = esc(nm[0]).split(' ').map(w => w[0] || '').join('').slice(0, 2);
         // Both go to a card; the difference is only whether it is in the deck or is
@@ -1578,13 +1632,18 @@ function teamCard(t){
             loading="lazy" onerror="this.style.display='none'">${nm[2]
               ? `<b class="pmwm">${esc(nm[2])}</b>` : ''}
             <b class="pmtot">${r.pts.toLocaleString('en-US')}<i>total</i></b>
-            <span class="pmpills"><b>${r.ppg}<i>pts</i></b
-              ><b>${r.apg}<i>ast</i></b><b>${r.rpg}<i>reb</i></b></span></span>
+            <span class="pmpills">${ROSTKEY.map(k =>
+              `<b class="${k[0] === ROSTBY ? 'on' : ''}">${r[k[1]]}<i>${k[0]}</i></b>`
+              ).join('')}</span></span>
           <span class="pmname"><span>${esc(nm[0])}</span>${nm[2]
             ? `<b class="pmno">${esc(nm[2])}</b>` : ''}</span>
         </a>`;
-      }).join('')}</div></div>` : '';
+      }).join('')}</div>`;
+}
 
+/* The markup, split from teamCard only so the roster deck can be rebuilt on its own when
+   the sort changes. Everything it reads is computed once, up there, and handed over. */
+function teamBody(t, {roster, champ, cup, intl, po, rec}){
   return `<div class="in">
     <div class="tgrid">
       <div class="tid">
@@ -1814,11 +1873,12 @@ const RACES = {
          double figures on the same night. Thirty-four players managed one all season.`
       : `Every night with two of points, assists, rebounds, steals or blocks in double
          figures. The gold is how many of those went to three.`,
+    // Both numbers on the value line, triples first -- they are a part and its whole,
+    // and one without the other says nothing about how a column is filled.
     rows: m => lead('dbl', m).map(r => ({
       id: r[0], ab: r[1],
       v: m === 'td' ? r[3] : r[2],
-      big: m === 'td' ? r[3] : r[2],
-      lab: m === 'td' ? 'triples' : 'doubles',
+      big: `${r[3]}<em>·</em>${r[2]}`, lab: 'triples · doubles', wide: true,
       tip: `${r[2]} doubles, ${r[3]} of them triples`,
       // In the Doubles view the column is every such night and the gold is the triples
       // inside it. In the Triples view the column IS the triples, so it is all gold --
@@ -1903,7 +1963,7 @@ function raceBody(kind){
           onclick="goPlayer('${r.id}');return false"
           title="${esc(nm)} — ${esc(r.tip)}"
           style="height:${(r.v / max * 92).toFixed(1)}%;--c:${col}">${segs}
-          <b class="rval" style="--ic:${ink(topCol)}">${
+          <b class="rval${r.wide ? ' two' : ''}" style="--ic:${ink(topCol)}">${
             r.big}<i style="color:${ink(topCol)};opacity:.72">${r.lab}</i></b>
           <span class="rfoot"><em class="rrk">${i + 1}</em>
             <img src="${head(r.id)}" alt="" loading="lazy"
@@ -2350,6 +2410,7 @@ function paint(){
   if (location.hash !== want) history.replaceState(null, '', want);
   try { localStorage.setItem('nba.card', cur); } catch(e) {}
   paintLog(cur);
+  paintRoster(cur);
   updateSocialMeta();
 }
 function go(i, smooth = true){
