@@ -508,6 +508,21 @@ def main(label):
             "avg": sorted(rows, key=lambda r: (-r[3], -r[2], r[0]))[:12],
         }
 
+    # Doubles. Same row shape, different meaning: [id, team, ALL doubles, of which
+    # triples, games]. ESPN's doubleDouble counts every night with two or more
+    # categories in double figures INCLUDING the triples -- the per-game flags built
+    # above reconcile to it on that reading, `>= 2` against dd and `== 3` against td,
+    # 100 out of 100. So the two numbers are a whole and a part of it, not two
+    # separate tallies: Jokic's 55 and 34 are 55 nights, 34 of them triples, and
+    # adding them would claim 89 in a 65-game season.
+    dblrows = [[p["id"], p["team"], int(p["rs"].get("doubleDouble", 0)),
+                int(p["rs"].get("tripleDouble", 0)),
+                int(p["rs"].get("gamesPlayed", 0))] for p in deck]
+    leaders["dbl"] = {
+        "tot": sorted(dblrows, key=lambda r: (-r[2], -r[3], r[0]))[:12],
+        "td": sorted(dblrows, key=lambda r: (-r[3], -r[2], r[0]))[:12],
+    }
+
     champ = next((t["abbr"] for t in out_teams if t["po"] and t["po"]["outcome"] == "CHAMPIONS"), None)
 
     # Team-card rosters reference players by id; ship a lookup so they can show names

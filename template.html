@@ -510,31 +510,6 @@ a{color:inherit}
 .mix{display:flex;height:9px;border-radius:99px;overflow:hidden;background:var(--pan2);gap:1px}
 .mix i{display:block;height:100%}
 /* --- the biggest nights: 100 columns, points up the y axis, name inside the column --- */
-.nbox{flex:1 1 auto;min-height:0;position:relative;padding-left:34px;
-  display:flex;flex-direction:column}
-.nplot{flex:1 1 auto;min-height:0;position:relative;display:flex;align-items:flex-end;
-  gap:1px;padding-top:4px}
-.ngrid{position:absolute;left:0;right:0;border-top:1px solid rgba(150,166,205,.12);
-  pointer-events:none}
-.ngrid.base{border-top-color:rgba(150,166,205,.3)}
-.nb{flex:1 1 0;min-width:0;height:100%;display:flex;align-items:flex-end;position:relative}
-.nbar{width:100%;border-radius:3px 3px 0 0;position:relative;overflow:hidden;
-  transition:filter .1s}
-.nb:hover .nbar{filter:brightness(1.4)}
-@media (hover:hover){ .nb{cursor:pointer} }
-/* The name is anchored to the FOOT of its own column and reads upward, so a long one
-   runs into the empty part of the bar rather than off the top of a short one. */
-.nnm{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;
-  padding-bottom:6px;overflow:hidden;pointer-events:none}
-.nnm i{writing-mode:vertical-rl;transform:rotate(180deg);font-style:normal;font-size:9px;
-  font-weight:700;letter-spacing:.01em;white-space:nowrap;
-  text-shadow:0 1px 2px rgba(0,0,0,.55)}
-/* 100 columns need about 1200px of plot before a 9px name fits in one. Below that the
-   text is a two-pixel slice of a glyph, so drop it and let the hover carry the name. */
-@media (max-width:1180px){ .nnm{display:none} }
-.nfoot{display:flex;gap:12px;font-size:10px;color:var(--dim);margin-top:6px;
-  padding-left:34px;flex-wrap:wrap}
-.nfoot b{color:var(--ink)}
 
 /* One tooltip for the whole film, positioned from the pointer. position:fixed keeps it
    out of the cards' overflow, which clips anything drawn inside a chart panel. */
@@ -593,34 +568,48 @@ a{color:inherit}
 .rcol{min-width:0;height:100%;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:8px;
   container-type:inline-size}
 .rplot{position:relative;display:flex;align-items:flex-end;min-height:0}
+/* A SIZE container, so everything inside can be bounded by the bar's own height as well
+   as its width. Without that, a short column cannot hold its furniture: the triples view
+   is led by Jokić on 34 with the rest under 13, which puts a 30px number, a 48px rank
+   and a 99px photo inside a 128px bar, and they land on top of each other. Bounding them
+   by cqh shrinks the contents of a short column instead of padding the column out to fit
+   them, so the scale stays honest. */
 .rbar{position:relative;display:block;width:100%;border-radius:11px 11px 7px 7px;
-  overflow:hidden;text-decoration:none;color:inherit;
+  overflow:hidden;text-decoration:none;color:inherit;container-type:size;
   background:linear-gradient(180deg,var(--c),color-mix(in srgb,var(--c) 52%,#05070d))}
 .rbar:hover{outline:2px solid rgba(255,255,255,.4);outline-offset:1px}
-/* The average, at the top of the column. Outlined rather than filled: a solid number
-   this size becomes a second block of colour on a column that is already one. */
-.rval{position:absolute;left:0;right:0;top:8px;text-align:center;font-weight:800;
+/* Stacked segments, from the baseline up, as a share of the column's own height. A
+   segment with no colour of its own leaves the bar's gradient showing through. */
+.rseg{position:absolute;left:0;right:0;display:block}
+/* The value, at the top of the column. Outlined rather than filled: a solid number this
+   size becomes a second block of colour on a column that is already one. --ic is set per
+   column from ink() against whatever segment the label lands on -- gold and the
+   free-throw pink are far too light to take a white outline. */
+.rval{position:absolute;left:0;right:0;top:8px;z-index:2;text-align:center;font-weight:800;
   line-height:.88;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
-  color:rgba(255,255,255,.95);font-size:clamp(15px,2.2vw,32px)}
+  color:var(--ic,rgba(255,255,255,.95));font-size:clamp(15px,2.2vw,32px)}
 @supports (-webkit-text-stroke: 1px #000){
-  .rval{color:transparent;-webkit-text-stroke:1.4px rgba(255,255,255,.93)}
+  .rval{color:transparent;-webkit-text-stroke:1.4px var(--ic,rgba(255,255,255,.93))}
 }
 .rval i{display:block;margin-top:4px;font-style:normal;font-weight:700;font-size:8px;
   letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.6);
   -webkit-text-stroke:0}
+.rfoot img{width:100%;display:block}
 /* The rank sits just above the player, so the two read as one object at the foot of the
    bar. Clear of him, not tucked into him: these cutouts have almost no transparent
    headroom -- the hair starts within a few percent of the top edge -- so a negative
    margin here puts a number on his head rather than over it. */
-.rfoot{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;
-  align-items:center}
+.rfoot{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;
+  flex-direction:column;align-items:center}
 .rrk{font-style:normal;font-weight:800;line-height:.78;letter-spacing:-.04em;
   color:rgba(255,255,255,.22);font-size:clamp(22px,3.4vw,58px);margin-bottom:5px}
-.rfoot img{width:100%;display:block}
-/* Sized to the column, not the window: ten of these narrow as the card does. */
-@supports (container-type: inline-size){
-  .rval{font-size:min(27cqw, 34px)}
-  .rrk{font-size:min(46cqw, 62px)}
+/* Sized to the column, not the window: ten of these narrow as the card does, and every
+   one is bounded by its own bar's height so a short column shrinks rather than collides. */
+@supports (container-type: size){
+  .rval{font-size:min(27cqw, 34px, 15cqh)}
+  .rval i{font-size:min(8px, 3.5cqh)}
+  .rrk{font-size:min(46cqw, 62px, 22cqh)}
+  .rfoot img{width:min(100%, 48cqh)}
 }
 .rnm{text-align:center;font-size:clamp(9.5px,.82vw,12px);line-height:1.3;min-width:0}
 .rnm .rwho{display:block;font-weight:600;overflow-wrap:anywhere}
@@ -899,7 +888,7 @@ const sgn = n => (n > 0 ? '+' : '') + n;
    chart that is about teams. The charts are split by their subject, not kept in one lump
    at the end: the scoring race, the shot diet and the biggest nights all rank players,
    the ladder ranks teams. */
-const PCHARTS = ['race', 'astrace', 'rebrace', 'volume', 'nights'];
+const PCHARTS = ['race', 'astrace', 'rebrace', 'dblrace', 'nights', 'volume'];
 const TCHARTS = ['ladder'];
 
 const CARDS = [{kind:'cover'}]
@@ -1711,7 +1700,12 @@ function playerCard(p){
             <div class="k">Three point</div></div>
           <div><div class="v vg">${pie(p.ft,'var(--ft)')}<span style="color:var(--ft)">${p.ft}<small>%</small></span></div>
             <div class="k">Free throws</div></div>
-          <div><div class="v">${p.dd}</div><div class="k">Double-doubles</div></div>
+          <!-- ESPN's doubleDouble counts every night with two or more categories in
+               double figures, TRIPLES INCLUDED -- the per-game flags reconcile to it on
+               that reading. Shown side by side raw, the two cells read as 55 + 34 = 89
+               nights in a 65-game season. Subtracting makes them add up, and makes them
+               agree with the Doubles strip under the game chart, which is exclusive. -->
+          <div><div class="v">${p.dd - p.td}</div><div class="k">Double-doubles</div></div>
           <div><div class="v">${p.td}</div><div class="k">Triple-doubles</div></div>
           <div><div class="v">${p.highs.pts}</div>
             <div class="k" title="Best game of the season">Best${p.highs.opp
@@ -1755,32 +1749,104 @@ function noPlayers(kick, title){
   </div>`;
 }
 
-/* Three ranking charts off one shape: points, assists, rebounds, in that order
-   everywhere they appear together.
+/* ---------- the ranking columns ----------
+   Five cards off one shape: a top ten drawn as columns, the player standing at the foot
+   of his own. Points, assists, rebounds -- that order, everywhere the three appear
+   together -- then doubles, then the biggest single nights.
 
-   Each is drawn from D.leaders, which ranks the WHOLE POOL rather than the carded 100.
-   For points those are the same list, but for the other two they are not: Rudy Gobert is
-   third in rebounding and has no card, so ranking what happened to be on hand would have
-   credited the lead to the wrong player. Points takes the same route anyway, so no card
-   depends on the deck's order staying what it is. */
+   The three season categories are drawn from D.leaders, which ranks the WHOLE POOL
+   rather than the carded 100. For points those are the same list; for the other two they
+   are not. Rudy Gobert is third in rebounding and has no card, so ranking what happened
+   to be on hand would have credited the lead to the wrong player. Points takes the same
+   route anyway, so no card depends on the deck's order staying what it is. */
+const fmt = n => Number(n).toLocaleString('en-US');
+const lead = (k, m) => (((D.leaders || {})[k] || {})[m] || []);
+
+/* A season row is [id, team, total, average, games]; a doubles row is
+   [id, team, ALL doubles, of which triples, games]. ESPN counts a triple-double as a
+   double-double as well -- the per-game flags reconcile to it on that reading, 100 out
+   of 100 -- so those two numbers are a whole and a part of it. Adding them would give
+   Jokić 89 such nights in a 65-game season. The column shows the whole and colours the
+   part, which is the only honest way to put both on one bar. */
 const RACES = {
-  race: {k: 'pts', kick: 'the scoring race', h: 'Who scored the most',
-         totW: 'points', avgW: 'a game',
-         totP: 'Total points, not per game — so staying on the floor counts.',
-         avgP: `Points a game, with no minimum — so a player who missed half the season
-                is here on the strength of the half he played.`},
-  astrace: {k: 'ast', kick: 'the assist race', h: 'Who passed the most',
-            totW: 'assists', avgW: 'a game',
-            totP: 'Total assists — the pass that led to the basket, all season.',
-            avgP: 'Assists a game, with no minimum for games played.'},
-  rebrace: {k: 'reb', kick: 'the rebounding race', h: 'Who rebounded the most',
-            totW: 'rebounds', avgW: 'a game',
-            totP: 'Total rebounds, both ends of the floor.',
-            avgP: 'Rebounds a game, with no minimum for games played.'},
+  race: {
+    kick: 'the scoring race', h: () => `Who scored the most, ${SEASON}`,
+    tabs: [['tot', 'Total'], ['avg', 'A game']],
+    note: m => m === 'avg'
+      ? `Points a game, with no minimum — so a player who missed half the season is here
+         on the strength of the half he played.`
+      : `Total points, not per game — so staying on the floor counts.`,
+    rows: m => lead('pts', m).map(r => ({
+      id: r[0], ab: r[1], v: m === 'avg' ? r[3] : r[2],
+      big: m === 'avg' ? r[3] : fmt(r[2]), lab: m === 'avg' ? 'a game' : 'points',
+      tip: `${fmt(r[2])} points, ${r[3]} a game`,
+      sub: m === 'avg' ? `<b>${fmt(r[2])}</b> in ${r[4]}` : `<b>${r[3]}</b> a game`})),
+  },
+  astrace: {
+    kick: 'the assist race', h: () => `Who passed the most, ${SEASON}`,
+    tabs: [['tot', 'Total'], ['avg', 'A game']],
+    note: m => m === 'avg'
+      ? `Assists a game, with no minimum for games played.`
+      : `Total assists — the pass that led to the basket, all season.`,
+    rows: m => lead('ast', m).map(r => ({
+      id: r[0], ab: r[1], v: m === 'avg' ? r[3] : r[2],
+      big: m === 'avg' ? r[3] : fmt(r[2]), lab: m === 'avg' ? 'a game' : 'assists',
+      tip: `${fmt(r[2])} assists, ${r[3]} a game`,
+      sub: m === 'avg' ? `<b>${fmt(r[2])}</b> in ${r[4]}` : `<b>${r[3]}</b> a game`})),
+  },
+  rebrace: {
+    kick: 'the rebounding race', h: () => `Who rebounded the most, ${SEASON}`,
+    tabs: [['tot', 'Total'], ['avg', 'A game']],
+    note: m => m === 'avg'
+      ? `Rebounds a game, with no minimum for games played.`
+      : `Total rebounds, both ends of the floor.`,
+    rows: m => lead('reb', m).map(r => ({
+      id: r[0], ab: r[1], v: m === 'avg' ? r[3] : r[2],
+      big: m === 'avg' ? r[3] : fmt(r[2]), lab: m === 'avg' ? 'a game' : 'rebounds',
+      tip: `${fmt(r[2])} rebounds, ${r[3]} a game`,
+      sub: m === 'avg' ? `<b>${fmt(r[2])}</b> in ${r[4]}` : `<b>${r[3]}</b> a game`})),
+  },
+  dblrace: {
+    kick: 'the doubles', h: () => `Who doubled up the most, ${SEASON}`,
+    tabs: [['tot', 'Doubles'], ['td', 'Triples']],
+    note: m => m === 'td'
+      ? `Triple-doubles only — three of points, assists, rebounds, steals or blocks in
+         double figures on the same night. Thirty-four players managed one all season.`
+      : `Every night with two of points, assists, rebounds, steals or blocks in double
+         figures. The gold is how many of those went to three.`,
+    rows: m => lead('dbl', m).map(r => ({
+      id: r[0], ab: r[1],
+      v: m === 'td' ? r[3] : r[2],
+      big: m === 'td' ? r[3] : r[2],
+      lab: m === 'td' ? 'triples' : 'doubles',
+      tip: `${r[2]} doubles, ${r[3]} of them triples`,
+      // In the Doubles view the column is every such night and the gold is the triples
+      // inside it. In the Triples view the column IS the triples, so it is all gold --
+      // the height has to encode what the ranking is by, or the two disagree.
+      segs: m === 'td' ? [[r[3], 'var(--gold)']]
+                       : [[r[2] - r[3], null], [r[3], 'var(--gold)']],
+      sub: m === 'td' ? `<b>${r[2]}</b> doubles in ${r[4]}`
+                      : `<b>${r[3]}</b> of them triples`})),
+  },
+  nights: {
+    kick: 'the biggest nights', h: () => 'The ten biggest scoring performances',
+    note: () => `Performances, not games: two players from the same game can both be
+      here, one of them the man he was playing against. Each column is split by where
+      the points came from. Hover or tap for the night.`,
+    rows: () => (D.nights || []).slice(0, 10).map((g, i) => {
+      const three = (g.tpm || 0) * 3, ft = g.ftm || 0;
+      return {id: g.id, ab: g.team, v: g.pts, big: g.pts, lab: 'points', night: i,
+        tip: `${g.name} — ${g.pts} against ${g.opp}`,
+        segs: [[three, 'var(--three)'], [Math.max(0, g.pts - three - ft), 'var(--two)'],
+               [ft, 'var(--ft)']],
+        sub: `<b>${g.h ? 'vs' : '@'} ${esc(g.opp)}</b> · ${WHEN(g.date)}`};
+    }),
+  },
 };
 /* Per chart, not shared: switching the assist card to averages should not silently
    re-rank the scoring one behind your back. */
-const RACEBY = {race: 'tot', astrace: 'tot', rebrace: 'tot'};
+const RACEBY = {};
+Object.entries(RACES).forEach(([k, c]) => { if (c.tabs) RACEBY[k] = c.tabs[0][0]; });
 function setRaceBy(kind, k){
   if (k === RACEBY[kind]) return;
   RACEBY[kind] = k;
@@ -1791,60 +1857,61 @@ function setRaceBy(kind, k){
 
 function raceCard(kind){
   const cfg = RACES[kind];
-  const rows = ((D.leaders || {})[cfg.k] || {}).tot || [];
-  if (!rows.length) return noPlayers(cfg.kick, `${cfg.h}, ${SEASON}`);
+  if (!cfg.rows(RACEBY[kind]).length) return noPlayers(cfg.kick, cfg.h());
   return `<div class="in">
     <div class="kick">Chart · ${cfg.kick}</div>
     <h2 style="font-size:clamp(19px,2.2vw,29px);font-weight:700;letter-spacing:-.02em">
-      ${cfg.h}, ${SEASON}</h2>
+      ${cfg.h()}</h2>
     ${raceBody(kind)}
   </div>`;
 }
 
-/* A leader row is [id, team, total, average, games played]. */
 function raceBody(kind){
-  const cfg = RACES[kind];
-  const avg = RACEBY[kind] === 'avg';
-  const top = (((D.leaders || {})[cfg.k] || {})[avg ? 'avg' : 'tot'] || []).slice(0, 10);
-  const val = r => avg ? r[3] : r[2];
-  const max = val(top[0]);
-  /* Columns capped at 92% of the plot so the totals have somewhere to sit. That is a top
-     margin, not a broken axis: the baseline is zero and every column is scaled by the
-     same factor, which is why the ten look close -- no. 10 really is within a sixth of
-     no. 1 over a whole season. */
+  const cfg = RACES[kind], mode = RACEBY[kind];
+  const top = cfg.rows(mode).slice(0, 10);
+  const max = top[0].v;
   return `<div class="racewrap">
     <div class="racehd">
-      <p>${(avg ? cfg.avgP : cfg.totP).replace(/\s+/g, ' ')}
-        Ranked over everyone who played, not only the hundred with cards.</p>
-      <span class="ltabs">${[['tot', 'Total'], ['avg', 'A game']].map(k =>
-        `<button class="ltab ${k[0] === RACEBY[kind] ? 'on' : ''}"
-          onclick="setRaceBy('${kind}','${k[0]}')">${k[1]}</button>`).join('')}</span>
+      <p>${cfg.note(mode).replace(/\s+/g, ' ')}${cfg.tabs
+        ? ' Ranked over everyone who played, not only the hundred with cards.' : ''}</p>
+      ${cfg.tabs ? `<span class="ltabs">${cfg.tabs.map(k =>
+        `<button class="ltab ${k[0] === mode ? 'on' : ''}"
+          onclick="setRaceBy('${kind}','${k[0]}')">${k[1]}</button>`).join('')}</span>` : ''}
     </div>
     <div class="race">${top.map((r, i) => {
-      const [id, ab, tot, per, gp] = r;
-      const t = TEAMS[ab] || {}, nm = (NAMES[id] || ['—'])[0];
+      const t = TEAMS[r.ab] || {}, nm = (NAMES[r.id] || ['—'])[0];
+      const col = t.primary || 'var(--acc)';
       // The whole column is the link -- the photo included, which is what anyone
       // actually aims at. The name below is its own link, so it stays outside: an
       // anchor cannot contain another one. goPlayer() covers both kinds of card, which
       // matters here: three of the ten rebounders have no card in the deck.
-      const at = CARD_OF_PLAYER[id], k = TAIL_OF[id];
+      const at = CARD_OF_PLAYER[r.id], k = TAIL_OF[r.id];
       const href = at != null ? '#' + (at + 1) : k != null ? '#' + (CARDS.length + k + 1) : '#';
+      // Stacked from the baseline up, as a share of this column's own height. The
+      // segment the value label sits on decides the colour of its outline -- gold and
+      // the free-throw pink are far too light to take a white one.
+      let segs = '', topCol = col, acc = 0;
+      (r.segs || []).forEach(([v, c]) => {
+        if (v > 0) topCol = c || col;
+        segs += v <= 0 ? '' : `<i class="rseg" style="bottom:${(acc / r.v * 100).toFixed(2)}%;
+          height:${(v / r.v * 100).toFixed(2)}%;background:${c || 'transparent'}"></i>`;
+        acc += v;
+      });
       return `<div class="rcol">
-        <div class="rplot"><a class="rbar" href="${href}"
-          onclick="goPlayer('${id}');return false"
-          title="${esc(nm)} — ${tot.toLocaleString('en-US')} ${cfg.totW}, ${per} a game"
-          style="height:${(val(r) / max * 92).toFixed(1)}%;--c:${t.primary || 'var(--acc)'}">
-          <b class="rval">${avg ? per : tot.toLocaleString('en-US')}<i>${
-            avg ? cfg.avgW : cfg.totW}</i></b>
+        <div class="rplot"><a class="rbar" href="${href}"${
+          r.night != null ? ` data-night="${r.night}"` : ''}
+          onclick="goPlayer('${r.id}');return false"
+          title="${esc(nm)} — ${esc(r.tip)}"
+          style="height:${(r.v / max * 92).toFixed(1)}%;--c:${col}">${segs}
+          <b class="rval" style="--ic:${ink(topCol)}">${
+            r.big}<i style="color:${ink(topCol)};opacity:.72">${r.lab}</i></b>
           <span class="rfoot"><em class="rrk">${i + 1}</em>
-            <img src="${head(id)}" alt="" loading="lazy"
+            <img src="${head(r.id)}" alt="" loading="lazy"
               onerror="this.style.display='none'"></span></a></div>
         <div class="rnm">
-          <span class="rwho">${plink(id, esc(shortName(nm)))}</span>
-          <i class="rteam">${tlink(ab, esc(t.name || ab))}</i>
-          <i class="rtot">${avg
-            ? `<b>${tot.toLocaleString('en-US')}</b> in ${gp}`
-            : `<b>${per}</b> a game`}</i></div>
+          <span class="rwho">${plink(r.id, esc(shortName(nm)))}</span>
+          <i class="rteam">${tlink(r.ab, esc(t.name || r.ab))}</i>
+          <i class="rtot">${r.sub}</i></div>
       </div>`;
     }).join('')}</div>
   </div>`;
@@ -1959,55 +2026,6 @@ function dblLine(o){
     <span class="tdim">${got.map(x => `${x[1]} ${x[0]}`).join(' · ')}</span></div>`;
 }
 
-function nightsCard(){
-  const N = D.nights || [];
-  if (!N.length) return noPlayers('the biggest nights', 'The 100 biggest scoring performances');
-
-  const max = Math.ceil(N[0].pts / 10) * 10 + 5;     // headroom above the best night
-  const cut = N[N.length - 1].pts;
-  const inList = N.filter(n => n.pts === cut).length;
-  const tied = N[N.length - 1].tie || inList;   // nights on the cut league-wide
-  const y = v => 100 - v / max * 100;                // % from the top of the plot
-
-  let grid = `<div class="ngrid base" style="bottom:0"></div>`;
-  // The zero label sits ON the baseline, so it is anchored above the line rather than
-  // centred on it -- centred, half of it hangs below the bottom of the card and clips.
-  let labels = `<span class="arclbl" style="top:100%;transform:translateY(-100%)">0</span>`;
-  for (let v = 20; v < max; v += 20){
-    grid += `<div class="ngrid" style="top:${y(v).toFixed(2)}%"></div>`;
-    labels += `<span class="arclbl" style="top:${y(v).toFixed(2)}%">${v}</span>`;
-  }
-
-  const bars = N.map((n, i) => {
-    const col = winColor(TEAMS[n.team] || {});
-    return `<div class="nb" data-night="${i}">
-      <div class="nbar" style="height:${(n.pts / max * 100).toFixed(2)}%;background:${col}">
-        <span class="nnm"><i style="color:${ink(col)}">${esc(n.name)}</i></span>
-      </div></div>`;
-  }).join('');
-
-  return `<div class="in">
-    <div class="kick">Chart · the biggest nights</div>
-    <h2 style="font-size:clamp(19px,2.2vw,29px);font-weight:700;letter-spacing:-.02em">
-      The 100 biggest scoring performances</h2>
-    <p style="font-size:12px;color:var(--dim);max-width:92ch">This ranks performances, not
-      games: every individual scoring night of ${SEASON}, league-wide. One player can
-      appear many times, and two players from the same game can both be here — one of
-      them the man he was playing against. Each column is one performance, its height the
-      points, its colour the team he played for.
-      Hover or tap a column for the game. It took <b style="color:var(--ink)">${cut}</b> points
-      to get here${tied > inList ? ` — ${tied} nights finished on exactly that, so the last
-      ${inList} places went to the earliest of them` : ''}.</p>
-    <div class="nbox" data-nights="1">${labels}
-      <div class="nplot">${grid}${bars}</div></div>
-    <div class="nfoot">
-      <span>highest <b>${N[0].pts}</b> — ${esc(N[0].name)}</span>
-      <span>lowest on the list <b>${cut}</b></span>
-      <span><b>${new Set(N.map(n => n.id)).size}</b> different players</span>
-      <span style="margin-left:auto">best → 100th, left to right</span></div>
-  </div>`;
-}
-
 function volumeCard(){
   const top = D.players.slice(0, 26);
   if (!top.length) return noPlayers('shot diet', 'How the top scorers got there');
@@ -2049,7 +2067,6 @@ film.innerHTML = CARDS.map(c => {
              : c.kind === 'player' ? playerCard(c.p)
              : RACES[c.kind]       ? raceCard(c.kind)
              : c.kind === 'ladder' ? ladderCard()
-             : c.kind === 'nights' ? nightsCard()
              : volumeCard();
   return `<section class="card">${body}</section>`;
 }).join('');
@@ -2227,7 +2244,7 @@ function onHover(e){
   const box = e.target.closest('.loghook');
   if (box) return logHover(e, box);
   clearHl();
-  const col = e.target.closest('.nb');
+  const col = e.target.closest('[data-night]');
   if (col) return showTip(nightTip(D.nights[+col.dataset.night]), e.clientX, e.clientY);
   hideTip();
 }
@@ -2291,11 +2308,9 @@ film.addEventListener('mousemove', onHover);
 film.addEventListener('mouseleave', () => { clearHl(); hideTip(); });
 /* Touch has no hover: a tap on a column shows its panel, the next tap elsewhere hides it. */
 film.addEventListener('click', e => {
-  const col = e.target.closest('.nb');
-  if (col && matchMedia('(hover: hover)').matches){
-    const id = (D.nights[+col.dataset.night] || {}).id;
-    if (id != null){ hideTip(); clearHl(); return goPlayer(id); }
-  }
+  // The column is a link now, so a click already goes to the card; this is only the
+  // touch case, where there is no hover and a tap has to be able to show the panel.
+  const col = e.target.closest('[data-night]');
   if (col || e.target.closest('.loghook')) onHover(e);
   else { clearHl(); hideTip(); }
 });
@@ -2309,8 +2324,8 @@ function label(i){
   if (c.kind === 'team') return c.t.name;
   if (c.kind === 'player') return `${c.p.name} · no. ${c.p.rank}`;
   return {race:'The scoring race', astrace:'The assist race',
-          rebrace:'The rebounding race', ladder:'The ladder', volume:'Shot diet',
-          nights:'The biggest nights'}[c.kind];
+          rebrace:'The rebounding race', dblrace:'The doubles', ladder:'The ladder',
+          volume:'Shot diet', nights:'The biggest nights'}[c.kind];
 }
 function section(i){
   let s = 0;
@@ -2471,6 +2486,7 @@ const INDEX = CARDS.map((c,i) => {
   else { s = {race:'scoring race points leaders chart scorers',
               astrace:'assist race assists leaders passing chart playmakers',
               rebrace:'rebounding race rebounds leaders boards chart rebounders',
+              dblrace:'doubles double-doubles triple-doubles chart leaders',
               ladder:'ladder standings seeds table chart',
               volume:'shot diet attempts volume chart',
               nights:'biggest nights best individual performances players high scoring 100 chart'}[c.kind];
