@@ -201,9 +201,10 @@ a{color:inherit}
   font-size:10px;color:rgba(255,255,255,.72);font-variant-numeric:tabular-nums;
   pointer-events:none;line-height:1;white-space:nowrap}
 .arclbl.zero{color:#fff;font-weight:700}
-.arcpk{position:absolute;font-size:9.5px;font-weight:800;color:var(--win);
+.arcpk{position:absolute;font-size:9.5px;font-weight:800;
   font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:none;
   text-shadow:0 1px 3px rgba(9,11,18,.92),0 0 2px rgba(9,11,18,.92)}
+.arcpk.hi{color:var(--win)} .arcpk.lo{color:var(--loss)}
 /* W / L sits on top of each bar. HTML, not <text>, for the same reason the axis labels
    are: this svg is preserveAspectRatio="none", which stretches glyphs sideways. The
    wrapper covers exactly the plot -- left:34px is the y-axis gutter, and an absolutely
@@ -962,19 +963,24 @@ function arcSvg(t){
     if (y(-v) < H - 10) labels += lbl(-v, '\u2212' + v);
   }
 
-  /* The peak carries its own number, next to the dot that marks it. HTML again, not
-     <text> -- and positioned against the same box the gridline labels use, so the
-     34px axis gutter has to be added back before the fraction along the season.
-     It flips below the dot in the top tenth of the box and anchors left/right at
-     the ends, so a peak in the first or last games is not half outside the card. */
-  if (hi > 0){
-    const f = pts.length > 1 ? pts.indexOf(hi) / (pts.length - 1) : 0;
-    const top = y(hi) / TOT * 100;
+  /* The peak and the low each carry their own number, beside the dot that marks it.
+     HTML again, not <text> -- and positioned against the same box the gridline labels
+     use, so the 34px axis gutter has to be added back before the fraction along the
+     season. Each sits on the far side of its dot from the filled area, and flips when
+     that side has no room: above needs a tenth of the box overhead, below has to clear
+     the W/L tick strip. At the ends it anchors left or right, so a peak or a low in the
+     opening or closing games is not half outside the card. */
+  const mark = (v, cls, side) => {
+    const f = pts.length > 1 ? pts.indexOf(v) / (pts.length - 1) : 0;
+    const top = y(v) / TOT * 100;
+    const up = side === 'up' ? top >= 10 : top > 78;
     const tx = f < .05 ? '0' : f > .95 ? '-100%' : '-50%';
-    labels += `<span class="arcpk" style="left:calc(34px + (100% - 34px) * ${f.toFixed(4)});
-      top:${top.toFixed(2)}%;transform:translate(${tx},${top < 10 ? '0' : '-100%'})
-      translateY(${top < 10 ? '9px' : '-7px'})">${sgn(hi)}</span>`;
-  }
+    return `<span class="arcpk ${cls}" style="left:calc(34px + (100% - 34px) * ${f.toFixed(4)});
+      top:${top.toFixed(2)}%;transform:translate(${tx},${up ? '-100%' : '0'})
+      translateY(${up ? '-7px' : '9px'})">${sgn(v)}</span>`;
+  };
+  if (hi > 0) labels += mark(hi, 'hi', 'up');
+  if (lo < 0) labels += mark(lo, 'lo', 'down');
 
   // Who each game was against, under its own tick. HTML, not <text>: this svg is
    // preserveAspectRatio="none", which stretches glyphs flat. Each code takes its
