@@ -582,20 +582,50 @@ a{color:inherit}
 
 /* The scoring race. The headshots are transparent cutouts, so a player standing at the
    foot of his own column has the team colour behind him rather than a photo box. */
+/* The switch shares the line with the standfirst rather than taking one of its own:
+   the columns want every pixel of height they can get. */
+.racewrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:14px}
+.racehd{display:flex;align-items:flex-start;gap:14px}
+.racehd p{font-size:12px;color:var(--dim);max-width:80ch;margin:0}
 .race{flex:1 1 auto;min-height:0;display:grid;
   grid-template-columns:repeat(10,minmax(0,1fr));grid-template-rows:minmax(0,1fr);
   gap:clamp(4px,.9vw,15px)}
-.rcol{min-width:0;height:100%;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:8px}
+.rcol{min-width:0;height:100%;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:8px;
+  container-type:inline-size}
 .rplot{position:relative;display:flex;align-items:flex-end;min-height:0}
-.rbar{position:relative;width:100%;border-radius:11px 11px 7px 7px;overflow:hidden;
+.rbar{position:relative;display:block;width:100%;border-radius:11px 11px 7px 7px;
+  overflow:hidden;text-decoration:none;color:inherit;
   background:linear-gradient(180deg,var(--c),color-mix(in srgb,var(--c) 52%,#05070d))}
-.rval{position:absolute;left:0;right:0;top:-20px;text-align:center;font-weight:800;
-  font-size:clamp(10px,1.1vw,15px);font-variant-numeric:tabular-nums}
-.rbar img{position:absolute;left:0;right:0;bottom:0;width:100%;display:block}
+.rbar:hover{outline:2px solid rgba(255,255,255,.4);outline-offset:1px}
+/* The average, at the top of the column. Outlined rather than filled: a solid number
+   this size becomes a second block of colour on a column that is already one. */
+.rval{position:absolute;left:0;right:0;top:8px;text-align:center;font-weight:800;
+  line-height:.88;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+  color:rgba(255,255,255,.95);font-size:clamp(15px,2.2vw,32px)}
+@supports (-webkit-text-stroke: 1px #000){
+  .rval{color:transparent;-webkit-text-stroke:1.4px rgba(255,255,255,.93)}
+}
+.rval i{display:block;margin-top:4px;font-style:normal;font-weight:700;font-size:8px;
+  letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.6);
+  -webkit-text-stroke:0}
+/* The rank sits just above the player, so the two read as one object at the foot of the
+   bar. Clear of him, not tucked into him: these cutouts have almost no transparent
+   headroom -- the hair starts within a few percent of the top edge -- so a negative
+   margin here puts a number on his head rather than over it. */
+.rfoot{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;
+  align-items:center}
+.rrk{font-style:normal;font-weight:800;line-height:.78;letter-spacing:-.04em;
+  color:rgba(255,255,255,.22);font-size:clamp(22px,3.4vw,58px);margin-bottom:5px}
+.rfoot img{width:100%;display:block}
+/* Sized to the column, not the window: ten of these narrow as the card does. */
+@supports (container-type: inline-size){
+  .rval{font-size:min(27cqw, 34px)}
+  .rrk{font-size:min(46cqw, 62px)}
+}
 .rnm{text-align:center;font-size:clamp(9.5px,.82vw,12px);line-height:1.3;min-width:0}
-.rnm .rrk{display:block;color:var(--dim);font-size:10px;font-weight:700}
 .rnm .rwho{display:block;font-weight:600;overflow-wrap:anywhere}
 .rnm i{display:block;color:var(--dim);font-style:normal;font-size:9.5px;margin-top:1px}
+.rnm .rtot b{color:var(--ink);font-weight:700}
 @media (max-width:1000px){
   .race{grid-template-columns:repeat(5,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);
     row-gap:14px}
@@ -1723,33 +1753,69 @@ function noPlayers(kick, title){
   </div>`;
 }
 
+/* Total points or points a game. They are different questions -- the first rewards
+   staying on the floor, the second ignores it -- and the deck is ordered by the first,
+   so the second needs somewhere to live. */
+let RACEBY = 'tot';
+function setRaceBy(k){
+  if (k === RACEBY) return;
+  RACEBY = k;
+  const el = document.querySelector('.card .racewrap');
+  if (el) el.outerHTML = raceBody();
+}
+
 function raceCard(){
-  const top = D.players.slice(0, 10);
-  if (!top.length) return noPlayers('the scoring race', `Who scored the most, ${SEASON}`);
-  const max = top[0].pts;
-  /* Columns capped at 92% of the plot so the totals have somewhere to sit. That is a top
-     margin, not a broken axis: the baseline is zero and every column is scaled by the
-     same factor, which is why the ten look close -- no. 10 really is within a sixth of
-     no. 1 over a whole season. */
+  if (!D.players.length) return noPlayers('the scoring race', `Who scored the most, ${SEASON}`);
   return `<div class="in">
     <div class="kick">Chart · the scoring race</div>
     <h2 style="font-size:clamp(19px,2.2vw,29px);font-weight:700;letter-spacing:-.02em">
       Who scored the most, ${SEASON}</h2>
-    <p style="font-size:12px;color:var(--dim);max-width:80ch">Total points, not per game —
-      so staying on the floor counts. Columns run from zero and carry the player's team
-      colour.</p>
+    ${raceBody()}
+  </div>`;
+}
+
+function raceBody(){
+  const avg = RACEBY === 'avg';
+  const val = p => avg ? p.ppg : p.pts;
+  const top = [...D.players].sort((a, b) => val(b) - val(a)).slice(0, 10);
+  const max = val(top[0]);
+  /* Columns capped at 92% of the plot so the totals have somewhere to sit. That is a top
+     margin, not a broken axis: the baseline is zero and every column is scaled by the
+     same factor, which is why the ten look close -- no. 10 really is within a sixth of
+     no. 1 over a whole season. */
+  return `<div class="racewrap">
+    <div class="racehd">
+      <p>${avg
+        ? `Points a game, with no minimum — so a player who missed half the season is
+           here on the strength of the half he played.`
+        : `Total points, not per game — so staying on the floor counts.`}
+        Columns run from zero and carry the player's team colour.</p>
+      <span class="ltabs">${[['tot', 'Total'], ['avg', 'A game']].map(k =>
+        `<button class="ltab ${k[0] === RACEBY ? 'on' : ''}" onclick="setRaceBy('${k[0]}')"
+          >${k[1]}</button>`).join('')}</span>
+    </div>
     <div class="race">${top.map((p, i) => {
       const t = TEAMS[p.team] || {};
+      // The whole column is the link -- the photo included, which is what anyone
+      // actually aims at. The name below is its own link, so it stays outside: an
+      // anchor cannot contain another one.
+      const at = CARD_OF_PLAYER[p.id];
       return `<div class="rcol">
-        <div class="rplot"><span class="rbar"
-          style="height:${(p.pts / max * 92).toFixed(1)}%;--c:${t.primary || 'var(--acc)'}">
-          <b class="rval" style="color:${readable(winColor(t), 4.5)}">${
-            p.pts.toLocaleString('en-US')}</b>
-          <img src="${head(p.id)}" alt="" loading="lazy"
-            onerror="this.style.display='none'"></span></div>
-        <div class="rnm"><span class="rrk">${i + 1}</span>
+        <div class="rplot"><a class="rbar" href="${at != null ? '#' + (at + 1) : '#'}"
+          onclick="goPlayer('${p.id}');return false"
+          title="${esc(p.name)} — ${p.pts.toLocaleString('en-US')} points"
+          style="height:${(val(p) / max * 92).toFixed(1)}%;--c:${t.primary || 'var(--acc)'}">
+          <b class="rval">${avg ? p.ppg : p.pts.toLocaleString('en-US')}<i>${
+            avg ? 'a game' : 'points'}</i></b>
+          <span class="rfoot"><em class="rrk">${i + 1}</em>
+            <img src="${head(p.id)}" alt="" loading="lazy"
+              onerror="this.style.display='none'"></span></a></div>
+        <div class="rnm">
           <span class="rwho">${plink(p.id, esc(shortName(p.name)))}</span>
-          <i>${tlink(p.team, esc(p.team))} · ${p.ppg} a game</i></div>
+          <i class="rteam">${tlink(p.team, esc(t.name || p.team))}</i>
+          <i class="rtot">${avg
+            ? `<b>${p.pts.toLocaleString('en-US')}</b> in ${p.gp}`
+            : `<b>${p.ppg}</b> a game`}</i></div>
       </div>`;
     }).join('')}</div>
   </div>`;
