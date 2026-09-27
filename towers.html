@@ -371,7 +371,6 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
 
 <div id="subbar">
   <span class="lab">Group</span><div class="seg" id="groups"></div>
-  <span class="lab">Order</span><div class="seg" id="sorts"></div>
   <div id="legend">
     <span><i style="background:var(--win)"></i>win</span>
     <span><i style="background:var(--loss)"></i>loss</span>
@@ -501,7 +500,6 @@ const PREF = {
 };
 
 let group = PREF.get('group', 'conf');
-let sort  = PREF.get('sort', 'wins');
 let G     = MAXG;
 let playing = null;
 
@@ -536,8 +534,7 @@ function draw(){
   wrap.innerHTML = groupsOf().map(([name, rows]) => {
     const withRec = rows.map(t => ({t, r: recordAt(t, G)}));
     withRec.sort((a, b) =>
-      sort === 'wins' ? (b.r.w - a.r.w) || (a.r.l - b.r.l) || a.t.nick.localeCompare(b.t.nick)
-                      : a.t.nick.localeCompare(b.t.nick));
+      (b.r.w - a.r.w) || (a.r.l - b.r.l) || a.t.nick.localeCompare(b.t.nick));
 
     const towers = withRec.map(({t, r}) => {
       const champ = t.po && t.po.outcome === 'CHAMPIONS';
@@ -624,7 +621,7 @@ addEventListener('resize', paintScrub);
 /* Standing rule in this family: a reload lands exactly where you were, never at the
    start, and the address bar is always shareable. */
 function syncHash(){
-  const want = VIEW === 'bracket' ? '#bracket' : `#${group}/${sort}/${G}`;
+  const want = VIEW === 'bracket' ? '#bracket' : `#${group}/${G}`;
   if (location.hash !== want) history.replaceState(null, '', want);
   PREF.set('game', G);
   updateSocialMeta();
@@ -665,9 +662,11 @@ function updateSocialMeta(){
 }
 function readHash(){
   if ((location.hash || '') === '#bracket') return {view: 'bracket'};
-  const m = /^#([a-z]+)\/([a-z]+)\/(\d+)$/.exec(location.hash || '');
+  // #conf/82 now. The optional middle segment is the old order setting (#conf/wins/82),
+  // accepted and ignored so links shared before it was removed still open.
+  const m = /^#([a-z]+)\/(?:[a-z]+\/)?(\d+)$/.exec(location.hash || '');
   if (!m) return null;
-  return {group: m[1], sort: m[2], g: +m[3]};
+  return {group: m[1], g: +m[2]};
 }
 document.getElementById('slider').max = MAXG;
 paintScrub();
@@ -866,11 +865,7 @@ function drawGroups(){
   seg('groups', [['league','League'],['conf','Conference'],['div','Division']], group,
     v => { group = v; PREF.set('group', v); drawGroups(); draw(); syncHash(); });
 }
-function drawSorts(){
-  seg('sorts', [['wins','Record'],['name','A–Z']], sort,
-    v => { sort = v; PREF.set('sort', v); drawSorts(); draw(); syncHash(); });
-}
-drawGroups(); drawSorts(); drawViews();
+drawGroups(); drawViews();
 
 document.getElementById('strip').innerHTML =
   `<span class="pill on">Season</span>` +
@@ -976,8 +971,7 @@ addEventListener('resize', () => { sizeCells(); });
     // remembered from last time, or a shared #conf/wins/82 would open on the bracket.
     VIEW = 'towers'; PREF.set('view', VIEW); drawViews();
     if (['league','conf','div'].includes(h.group)) group = h.group;
-    if (['wins','name'].includes(h.sort)) sort = h.sort;
-    drawGroups(); drawSorts();
+    drawGroups();
     setG(h.g);
   } else {
     let g = MAXG;
