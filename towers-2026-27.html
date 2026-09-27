@@ -42,7 +42,7 @@
   --pan:rgba(255,255,255,.055); --pan2:rgba(255,255,255,.014);
   --line:rgba(150,166,205,.14);
   --acc:#e0453f; --gold:#f0c24a; --win:#43c07a; --loss:#e0554a;
-  --bar:46px; --ctl:58px;
+  --bar:46px; --sub:40px; --ctl:58px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
@@ -65,7 +65,16 @@ b{font-weight:700}
 .lab{color:var(--dim);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
   margin-right:2px;flex:0 0 auto}
 
-#wrap{position:fixed;top:var(--bar);bottom:var(--ctl);left:0;right:0;overflow:auto;
+/* The towers' own controls live under the bar rather than in it: the top bar is
+   navigation shared with the film, and Group / Order are settings of this one view.
+   The legend moved in with them -- it used to float over the top-right of the first
+   group, on top of whatever tower was there. */
+#subbar{position:fixed;top:var(--bar);left:0;right:0;height:var(--sub);z-index:35;
+  display:flex;align-items:center;gap:12px;padding:0 16px;font-size:12px;
+  background:rgba(7,9,16,.82);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+#subbar .pill{padding:4px 11px;font-size:11px}
+#wrap{position:fixed;top:calc(var(--bar) + var(--sub));bottom:var(--ctl);left:0;right:0;
+  overflow:auto;
   padding:14px 16px 8px}
 .group{margin-bottom:18px}
 .ghead{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
@@ -267,8 +276,8 @@ body.bracket #wrap{display:flex;flex-direction:column}
 
 .brnone{color:var(--dim);font-size:13px;padding:30px 4px}
 .brcap{font-size:10px;color:var(--dim);margin-top:10px;text-align:center}
-body.bracket #legend,body.bracket #ctlbar,body.bracket .towonly{display:none}
-body.bracket #wrap{bottom:0}
+body.bracket #subbar,body.bracket #ctlbar{display:none}
+body.bracket #wrap{top:var(--bar);bottom:0}
 /* Between a laptop and a phone the bracket still draws, but there is no width to spare:
    the rounds go back to equal columns, the gutters tighten, and the middle gives up the
    space it was using to make the Finals enormous. */
@@ -311,9 +320,7 @@ body.bracket #wrap{bottom:0}
   box-shadow:0 8px 26px rgba(0,0,0,.5);white-space:nowrap}
 #tip.on{display:block}
 #tip .t{color:var(--dim);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
-#legend{position:fixed;right:16px;top:calc(var(--bar) + 10px);z-index:30;display:flex;
-  gap:12px;font-size:10px;color:var(--dim);background:rgba(7,9,16,.7);
-  border:1px solid var(--line);border-radius:99px;padding:5px 12px;backdrop-filter:blur(8px)}
+#legend{margin-left:auto;display:flex;gap:12px;font-size:10px;color:var(--dim)}
 #legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
 .empty{color:var(--dim);font-size:12.5px;padding:6px 4px 12px;line-height:1.55;max-width:96ch}
 #credit{color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;
@@ -337,6 +344,7 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
 .approw i{width:9px;height:9px;border-radius:99px}
 .approw em{font-style:normal;color:var(--dim);font-size:11px;display:block}
 @media (max-width:760px){ #legend{display:none} .lab{display:none} #credit{display:none}
+  #subbar{overflow-x:auto;scrollbar-width:none}
   #topbar{overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
   #topbar::-webkit-scrollbar{display:none} }
 </style>
@@ -357,16 +365,18 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
   <div class="seg" id="seasons"></div>
   <div class="grow"></div>
   <span class="lab">View</span><div class="seg" id="views"></div>
-  <span class="lab towonly">Group</span><div class="seg towonly" id="groups"></div>
-  <span class="lab towonly">Order</span><div class="seg towonly" id="sorts"></div>
   <div id="credit">Produced with passion by <b>Carlo De Marchis</b> ·
     <a href="#" onclick="openMod('cmodal');return false">Credits</a><a class="agwas-ver" data-agwas-ver="nba" href="https://dataviz.aguywithascarf.com/releases/#nba" target="_blank" rel="noopener"></a></div>
 </div>
 
-<div id="legend">
-  <span><i style="background:var(--win)"></i>win</span>
-  <span><i style="background:var(--loss)"></i>loss</span>
-  <span><i style="background:rgba(150,166,205,.45)"></i>still to play</span>
+<div id="subbar">
+  <span class="lab">Group</span><div class="seg" id="groups"></div>
+  <span class="lab">Order</span><div class="seg" id="sorts"></div>
+  <div id="legend">
+    <span><i style="background:var(--win)"></i>win</span>
+    <span><i style="background:var(--loss)"></i>loss</span>
+    <span><i style="background:rgba(150,166,205,.45)"></i>still to play</span>
+  </div>
 </div>
 
 <div id="wrap"></div>
@@ -854,11 +864,11 @@ function applyView(){
 
 function drawGroups(){
   seg('groups', [['league','League'],['conf','Conference'],['div','Division']], group,
-    v => { group = v; PREF.set('group', v); drawGroups(); draw(); });
+    v => { group = v; PREF.set('group', v); drawGroups(); draw(); syncHash(); });
 }
 function drawSorts(){
   seg('sorts', [['wins','Record'],['name','A–Z']], sort,
-    v => { sort = v; PREF.set('sort', v); drawSorts(); draw(); });
+    v => { sort = v; PREF.set('sort', v); drawSorts(); draw(); syncHash(); });
 }
 drawGroups(); drawSorts(); drawViews();
 
@@ -962,6 +972,9 @@ addEventListener('resize', () => { sizeCells(); });
   // #bracket is the whole state this view has; the towers keep their own.
   if (h && h.view === 'bracket'){ VIEW = 'bracket'; drawViews(); return applyView(); }
   if (h){
+    // A link that names the towers is a request for the towers: it beats the view
+    // remembered from last time, or a shared #conf/wins/82 would open on the bracket.
+    VIEW = 'towers'; PREF.set('view', VIEW); drawViews();
     if (['league','conf','div'].includes(h.group)) group = h.group;
     if (['wins','name'].includes(h.sort)) sort = h.sort;
     drawGroups(); drawSorts();
