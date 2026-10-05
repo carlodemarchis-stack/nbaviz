@@ -77,15 +77,18 @@ b{font-weight:700}
 body.race #wrap,body.reg #wrap{display:flex;flex-direction:column}
 
 /* ---------- the regular season, every game ----------
-   Thirty rows, one cell per game, read exactly like the axis under the season arc on a
-   team card: a win sits in the upper half of its slot, a loss in the lower half, a game
-   not yet played straddles the middle, and the opponent's three letters run underneath
-   in the opponent's own colour. Same order as the race, so the two views agree. */
+   Thirty rows, one box per game: green for a win, red for a loss, the opponent's three
+   letters in white inside. The first version staggered thin marks and coloured the codes
+   in each opponent's colours, like a team card's axis -- it looked busy and hid the one
+   thing the view is for, how each season went. Solid boxes read as a streak at a glance.
+   Both are darkened so white letters clear 4.5:1 -- the green by 30%, since at 20% it
+   only managed 3.5; the red by 20%, which already gives 5.5.
+   Same order as the race, so the two views agree. */
 .rghead{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:6px;flex:0 0 auto}
 .rghead h2{font-size:clamp(17px,1.8vw,24px);font-weight:700;letter-spacing:-.015em}
 .rghead p{font-size:11px;color:var(--dim)}
 .rgkey{display:flex;gap:14px;flex-wrap:wrap;font-size:10.5px;color:var(--dim);margin-left:auto}
-.rgkey i{display:inline-block;width:10px;height:6px;border-radius:1.5px;margin-right:5px;vertical-align:1px}
+.rgkey i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 .rggrid{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 .rgconf{flex:0 0 auto;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
   padding:5px 0 3px;border-bottom:1px solid var(--line);margin-bottom:2px}
@@ -99,21 +102,22 @@ body.race #wrap,body.reg #wrap{display:flex;flex-direction:column}
 .rgrow.champ .ab{color:var(--gold)}
 .rgrow .rec{color:#c2cadb;text-align:right}
 .rgrow:hover{background:rgba(255,255,255,.03)}
-.rgcells{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:1px;min-width:0}
-.rgc{display:flex;flex-direction:column;min-width:0;padding:1px 0}
-.rgc .tk{position:relative;flex:1 1 auto;min-height:8px}
-.rgc .tk i{position:absolute;left:0;right:0;border-radius:1.5px}
-.rgc.w .tk i{top:4%;height:44%;background:var(--win);opacity:.85}
-.rgc.l .tk i{bottom:4%;height:44%;background:var(--loss);opacity:.85}
-.rgc.u .tk i{top:32%;height:36%;background:rgba(150,166,205,.16)}
-.rgc b{flex:0 0 auto;font-size:6.5px;line-height:1;font-weight:700;text-align:center;
-  letter-spacing:-.02em;white-space:nowrap;overflow:hidden;margin-top:1px}
-.rgc.u b{opacity:.45}
+.rgcells{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));
+  grid-template-rows:minmax(0,1fr);gap:1px;min-width:0}
+/* The cells fill the row's height. The rule above centres the row's labels, and caught
+   this strip too -- which shrank every box to the height of its 6.5px text. */
+.rgrow > .rgcells{align-self:stretch}
+.rgc{display:grid;place-items:center;min-width:0;margin:1px 0;border-radius:2px;
+  font-size:6.5px;line-height:1;font-weight:700;letter-spacing:-.02em;white-space:nowrap;
+  overflow:hidden;color:#fff;font-style:normal}
+.rgc.w{background:color-mix(in srgb,var(--win) 70%,#000)}
+.rgc.l{background:color-mix(in srgb,var(--loss) 80%,#000)}
+.rgc.u{background:rgba(150,166,205,.1);color:rgba(232,236,245,.42)}
 .rgaxis{flex:0 0 auto;display:grid;gap:7px;grid-template-columns:16px 18px 36px 42px minmax(0,1fr);
   margin-bottom:1px}
 .rgaxis .tx{position:relative;height:11px}
 .rgaxis .tx span{position:absolute;transform:translateX(-50%);font-size:9px;color:var(--dim)}
-@media (max-width:1100px){ .rgc b{display:none} }
+@media (max-width:1100px){ .rgc{font-size:0} }
 @media (max-width:900px){ body.reg #wrap{display:block} .rggrid,.rgaxis{min-width:860px} }
 .rchead{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:12px}
 .rchead h2{font-size:clamp(17px,1.8vw,24px);font-weight:700;letter-spacing:-.015em}
@@ -479,9 +483,9 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
         fills in once a place is <b>clinched</b> on the same arithmetic.</li>
       <li>Tags and lines appear once every team has played. On the final night the order
         is the official one, tiebreakers included.</li>
-      <li><b>Reg. season</b> lays out every game of every team, one row each: a win high in
-        its slot, a loss low, the opponent's letters underneath in its colour — the same
-        axis as the season arc on a team card. Hover a game for the score.</li>
+      <li><b>Games</b> lays out every game of every team, one row each: a green box
+        for a win, red for a loss, the opponent's letters inside. Hover a game for the
+        score.</li>
       <li><b>Bracket</b> shows how the playoffs went. The <b>NBA Cup Championship</b> does
         not count toward a team's record, so it is not in the race.</li>
     </ul>
@@ -582,24 +586,7 @@ function draw(){
   gnoLabel();
 }
 
-/* A colour lifted toward white until it clears a contrast ratio on this background --
-   winColor() guarantees brightness, not contrast, and a navy opponent code at 6.5px
-   needs the difference. Same function as the film's. */
-function readable(c, min){
-  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(c)
-         || /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(c);
-  if (!m) return c;
-  const hex = c[0] === '#' || /^[0-9a-f]{6}$/i.test(c);
-  let rgb = m.slice(1, 4).map(v => hex ? parseInt(v, 16) : +v);
-  const rel = ([r, g, b]) => {
-    const f = v => (v /= 255) <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
-  };
-  const BG = rel([9, 11, 18]);
-  for (let i = 0; i < 20 && (rel(rgb) + 0.05) / (BG + 0.05) < min; i++)
-    rgb = rgb.map(v => Math.round(v + (255 - v) * 0.12));
-  return `rgb(${rgb.join(',')})`;
-}
+
 
 /* How far the slider can go. In a season under way that is the most games any team has
    played -- a shared link from last season (#race/conf/82) must not open a new season at
@@ -1056,9 +1043,7 @@ function regHtml(){
       if (!g) return '<span class="rgc u"></span>';
       // Past the slider, a game has not happened yet -- whatever the final result was.
       const k = i < G && g.res ? (g.res === 'W' ? 'w' : 'l') : 'u';
-      const o = TEAMS.find(x => x.abbr === g.opp);
-      return `<span class="rgc ${k}" data-i="${i}"><span class="tk"><i></i></span><b style="color:${
-        readable(winColor(o || {}), 3.2)}">${esc(String(g.opp || '').slice(0, 3))}</b></span>`;
+      return `<span class="rgc ${k}" data-i="${i}">${esc(String(g.opp || '').slice(0, 3))}</span>`;
     }).join('');
     return `<div class="rgrow${r.champ ? ' champ' : ''}" data-ab="${r.t.abbr}">
       <span class="rk">${rank}</span>
@@ -1078,18 +1063,17 @@ function regHtml(){
       <p>${any ? 'Every game, every team — in standings order.'
         : `Every game on the ${esc(SEASON)} schedule, waiting to be played.`}</p>
       <div class="rgkey">
-        <span><i style="background:var(--win)"></i>win</span>
-        <span><i style="background:var(--loss)"></i>loss</span>
-        <span><i style="background:rgba(150,166,205,.3)"></i>to play</span>
-        <span style="font-weight:700;letter-spacing:-.02em">OPP<span style="font-weight:300;
-          letter-spacing:0"> &nbsp;opponent, in its colours</span></span>
+        <span><i style="background:color-mix(in srgb,var(--win) 70%,#000)"></i>win</span>
+        <span><i style="background:color-mix(in srgb,var(--loss) 80%,#000)"></i>loss</span>
+        <span><i style="background:rgba(150,166,205,.18)"></i>to play</span>
+        <span>letters = the opponent</span>
       </div>
     </div>${axis}<div class="rggrid">${body}</div>`;
 }
 
 /* ---------- which view ---------- */
 // A browser that last had the towers open remembers 'towers'; that view is gone.
-const VIEWS = [['race', 'Race'], ['reg', 'Reg. season'], ['bracket', 'Bracket']];
+const VIEWS = [['race', 'Race'], ['reg', 'Games'], ['bracket', 'Bracket']];
 let VIEW = VIEWS.some(v => v[0] === PREF.get('view', 'race')) ? PREF.get('view', 'race') : 'race';
 function drawViews(){
   seg('views', VIEWS, VIEW, v => {
