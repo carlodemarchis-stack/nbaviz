@@ -94,8 +94,8 @@ body.race #wrap,body.reg #wrap{display:flex;flex-direction:column}
   padding:5px 0 3px;border-bottom:1px solid var(--line);margin-bottom:2px}
 /* Name and record as large as the row will take: they are what a reader scans down
    for, and the boxes beside them only need room for three small letters. */
-.rgrow{flex:1 1 0;min-height:21px;display:grid;align-items:stretch;gap:7px;
-  grid-template-columns:16px 20px 54px 58px minmax(0,1fr);font-size:15px;line-height:1;
+.rgrow{flex:1 1 0;min-height:21px;display:grid;align-items:stretch;gap:5px;
+  grid-template-columns:16px 19px 42px 44px minmax(0,1fr);font-size:13px;line-height:1;
   font-variant-numeric:tabular-nums}
 .rgrow > span,.rgrow > img{align-self:center}
 .rgrow img{width:19px;height:19px;object-fit:contain;background:rgba(255,255,255,.07);border-radius:50%}
@@ -120,7 +120,13 @@ body.race #wrap,body.reg #wrap{display:flex;flex-direction:column}
 .rgc.w{background:color-mix(in srgb,var(--win) 70%,#000)}
 .rgc.l{background:color-mix(in srgb,var(--loss) 80%,#000)}
 .rgc.u{background:rgba(150,166,205,.1);color:rgba(232,236,245,.42)}
-.rgaxis{flex:0 0 auto;display:grid;gap:7px;grid-template-columns:16px 20px 54px 58px minmax(0,1fr);
+/* Point at a team's crest or letters and every other row's boxes fall back, so one
+   season stands alone in the grid. CSS only: :has() finds the hovered label, no
+   listener re-styling 2,460 cells as the mouse moves. */
+.rgc{transition:opacity .15s}
+.rggrid:has(.rgrow img:hover, .rgrow .ab:hover)
+  .rgrow:not(:has(img:hover, .ab:hover)) .rgc{opacity:.13}
+.rgaxis{flex:0 0 auto;display:grid;gap:5px;grid-template-columns:16px 19px 42px 44px minmax(0,1fr);
   margin-bottom:1px}
 .rgaxis .tx{position:relative;height:11px}
 .rgaxis .tx span{position:absolute;transform:translateX(-50%);font-size:9px;color:var(--dim)}
