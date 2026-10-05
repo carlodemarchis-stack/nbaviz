@@ -120,12 +120,17 @@ body.race #wrap,body.reg #wrap{display:flex;flex-direction:column}
 .rgc.w{background:color-mix(in srgb,var(--win) 70%,#000)}
 .rgc.l{background:color-mix(in srgb,var(--loss) 80%,#000)}
 .rgc.u{background:rgba(150,166,205,.1);color:rgba(232,236,245,.42)}
-/* Point at a team's crest or letters and every other row's boxes fall back, so one
-   season stands alone in the grid. CSS only: :has() finds the hovered label, no
-   listener re-styling 2,460 cells as the mouse moves. */
-.rgc{transition:opacity .15s}
-.rggrid:has(.rgrow img:hover, .rgrow .ab:hover)
-  .rgrow:not(:has(img:hover, .ab:hover)) .rgc{opacity:.13}
+/* Point at a team's crest or letters and the grid goes quiet except for that team's
+   games: its own row, and every box against it in the other twenty-nine -- so its
+   season is readable from both sides. Those keep the row team's colours: in Boston's
+   row a green DET is a game Boston won.
+   Speed matters with 2,460 boxes. The first version used :has(:hover), which made the
+   browser re-match every box on every hover change, and faded each one with its own
+   opacity transition. Now one class goes on the grid when you enter or leave a label
+   (not on every mouse move), about 82 boxes get marked, and the rest are dimmed by
+   swapping their colour -- a plain repaint, no layers, no animation. */
+.rggrid.focus .rgrow:not(.hot) .rgc:not(.hot){background:rgba(150,166,205,.06);
+  color:rgba(232,236,245,.14)}
 .rgaxis{flex:0 0 auto;display:grid;gap:5px;grid-template-columns:16px 19px 42px 44px minmax(0,1fr);
   margin-bottom:1px}
 .rgaxis .tx{position:relative;height:11px}
@@ -597,6 +602,7 @@ function recordAt(t, n){
 
 function draw(){
   if (VIEW === 'bracket') return;      // the bracket owns #wrap while it is up
+  FOCUS = null;
   document.getElementById('wrap').innerHTML = VIEW === 'reg' ? regHtml() : raceHtml();
   gnoLabel();
 }
@@ -1065,7 +1071,8 @@ function regHtml(){
       if (!g) return '<span class="rgc u"></span>';
       // Past the slider, a game has not happened yet -- whatever the final result was.
       const k = i < G && g.res ? (g.res === 'W' ? 'w' : 'l') : 'u';
-      return `<span class="rgc ${k}" data-i="${i}">${esc(String(g.opp || '').slice(0, 3))}</span>`;
+      return `<span class="rgc ${k}" data-i="${i}" data-o="${esc(g.opp || '')}">${
+        esc(String(g.opp || '').slice(0, 3))}</span>`;
     }).join('');
     return `<div class="rgrow${r.champ ? ' champ' : ''}" data-ab="${r.t.abbr}">
       <span class="rk">${rank}</span>
@@ -1182,6 +1189,8 @@ document.getElementById('wrap').addEventListener('mousemove', e => {
     return placeTip(e);
   }
   const cell = e.target.closest('.rgc[data-i]');
+  if (cell && cell === LASTCELL){ return placeTip(e); }
+  LASTCELL = cell;
   if (cell){
     const hit = REGROWS[cell.closest('.rgrow').dataset.ab];
     const g = hit && hit.games[+cell.dataset.i];
@@ -1224,7 +1233,31 @@ document.getElementById('wrap').addEventListener('mousemove', e => {
     ${r.champ ? `<div class="t" style="color:var(--gold)">${esc(r.t.po.outcome)}</div>` : ''}`;
   placeTip(e);
 });
-document.getElementById('wrap').addEventListener('mouseleave', () => tip.classList.remove('on'));
+document.getElementById('wrap').addEventListener('mouseleave', () => {
+  tip.classList.remove('on'); focusTeam(null);
+});
+
+/* Hovering a team in the Games view: see the CSS note on .rggrid.focus. mouseover fires
+   once per element entered, so this runs when the pointer crosses onto or off a label,
+   never per pixel of movement. */
+let FOCUS = null, LASTCELL = null;
+function focusTeam(ab){
+  if (ab === FOCUS) return;
+  const grid = document.querySelector('.rggrid');
+  FOCUS = ab;
+  if (!grid) return;
+  grid.querySelectorAll('.hot').forEach(e => e.classList.remove('hot'));
+  grid.classList.toggle('focus', !!ab);
+  if (!ab) return;
+  const row = grid.querySelector(`.rgrow[data-ab="${ab}"]`);
+  if (row) row.classList.add('hot');
+  grid.querySelectorAll(`.rgc[data-o="${ab}"]`).forEach(e => e.classList.add('hot'));
+}
+document.getElementById('wrap').addEventListener('mouseover', e => {
+  if (VIEW !== 'reg') return;
+  const lab = e.target.closest('.rgrow img, .rgrow .ab');
+  focusTeam(lab ? lab.closest('.rgrow').dataset.ab : null);
+});
 
 addEventListener('keydown', e => {
   if (e.key === 'Escape') return closeMods();
