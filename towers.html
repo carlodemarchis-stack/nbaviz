@@ -100,7 +100,7 @@ body.race #wrap,body.reg #wrap{display:flex;flex-direction:column}
 .rgrow .rk{color:var(--dim);text-align:right;font-size:10px}
 .rgrow .ab{font-weight:700;letter-spacing:.02em}
 .rgrow.champ .ab{color:var(--gold)}
-.rgrow .rec{color:#c2cadb;text-align:right}
+.rgrow .rec{color:var(--dim);text-align:right}
 .rgrow:hover{background:rgba(255,255,255,.03)}
 .rgcells{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));
   grid-template-rows:minmax(0,1fr);gap:1px;min-width:0}
@@ -152,7 +152,9 @@ body.race #wrap,body.reg #wrap{display:flex;flex-direction:column}
   background:rgba(255,255,255,.07);border-radius:50%}
 .rcrow .rk{color:var(--dim);text-align:right;font-size:10.5px}
 .rcrow .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rcrow .rec{text-align:right;color:#c2cadb;letter-spacing:.01em}
+.rcrow .rec{text-align:right;color:var(--dim);letter-spacing:.01em}
+/* Wins first and bright, losses quieter: the record leads with what a team has won. */
+.rcrow .rec b,.rgrow .rec b{color:#fff;font-weight:700}
 .rcrow .tag{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-align:center;
   border-radius:4px;padding:2px 0;color:#ff8b84;
   border:1px solid color-mix(in srgb,var(--acc) 55%,transparent)}
@@ -944,7 +946,7 @@ function raceHtml(){
         ${lines && c.cutPO != null ? `<i class="cut" style="left:${pc(c.cutPO)}%"></i>` : ''}
         ${labels(r)}
       </span>
-      <span class="rec">${r.w}-${r.l}</span>${tag}
+      <span class="rec"><b>${r.w}</b>-${r.l}</span>${tag}
     </div>`;
   };
   const subhd = txt => `<div class="rcsub">${txt}</div>`;
@@ -1049,7 +1051,7 @@ function regHtml(){
       <span class="rk">${rank}</span>
       <img src="${crest(r.t.abbr)}" alt="" loading="lazy">
       <span class="ab">${esc(r.t.abbr)}${r.champ ? '★' : ''}</span>
-      <span class="rec">${r.w}-${r.l}</span>
+      <span class="rec"><b>${r.w}</b>-${r.l}</span>
       <span class="rgcells" style="--n:${N}">${cells}</span></div>`;
   };
   // Same order as the race at the same game, so switching views never reshuffles.
