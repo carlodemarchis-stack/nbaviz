@@ -1,15 +1,22 @@
-# NBA Season Film + Season Towers
+# NBA Season Film + Playoff Race
 
 The NBA entry in the AGWAS sport-viz family. One app, two ways to read a season:
 
 - **`index.html` — the Film.** 135 cards, in five sections: a cover, the 100 leading
   scorers, the three charts that rank players, the 30 franchises in order of record, then
   the chart that ranks teams. Horizontal, deep-linkable, keyboard-driven.
-- **`towers.html` — the Towers.** All 30 teams as vertical stacks on a shared baseline:
-  **wins build up, losses hang down, games still to play hang from the ceiling.**
-  A slider replays the season game by game and the teams re-sort live.
+- **`towers.html` — the Season page: Race and Bracket.** The file keeps its old name so
+  links survive. **Race** is the NHL app's playoff race adapted to NBA rules: a bar of wins
+  per team on a fixed 82-game scale, a striped ghost to the most wins still reachable, two
+  cuts per conference (top six = playoffs, seven to ten = play-in), ranked by win
+  percentage, distance to each line in games behind; tabs Conference / Division / League,
+  hash `#race/<tab>/<game>`. A team fades once ten conference rivals have more wins than
+  it can reach, and its tag fills once fewer than six can still catch it — both checked
+  against the final seeds at every game of 2025-26 (no contradictions). The final night
+  uses the official `seed`, which carries tiebreakers. **Bracket** is the playoffs.
+  The old Towers view was removed; `#conf/82`-style links open the race on the same tab.
 
-Both carry a Film/Towers toggle and a season switcher. Built for **2025-26** (complete)
+Both carry a season switcher. Built for **2025-26** (complete)
 and **2026-27** (published schedule, nothing played yet).
 
 ## Build it
@@ -144,10 +151,9 @@ off the right edge once the strip grew.
 
 ## Layout rules that are load-bearing
 
-- **The towers' baseline is shared by all 30 teams.** Cell size is derived from the
-  *tallest column that can occur* (`MAXNEED`), not an average, and the label block under
-  each tower is a **fixed 50px with fixed line boxes** — the champion's ★ glyph made its
-  label 3px taller and lifted that one team's baseline off the line.
+- **The race's scale is the season, not the schedule.** `GAMES = 82`: 2026-27 publishes
+  only 80 games per team until the Cup group stage resolves, and sizing off the schedule
+  would cap every ghost two wins short.
 - **`content-visibility:auto` on `.card`** keeps 135 full-screen cards out of the render
   tree. Without it this format crashes mobile Safari.
 - **The hover panel is `position:fixed`, outside the cards.** Anything drawn inside a

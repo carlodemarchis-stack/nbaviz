@@ -72,14 +72,15 @@ def social(stem, season, payload, landing=False):
                  + ".")
 
     if stem == "towers":
-        desc = (f"Every NBA team's {season} season as a shape: wins stack up, losses hang "
-                f"down, games still to play hang from the ceiling. "
-                + (f"Drag the slider and watch the table re-sort game by game. {story}"
+        # The file keeps its name for old links; what it shows is the playoff race.
+        desc = (f"The {season} NBA playoff race: every team's wins, and the most it can "
+                f"still reach, against the playoff and play-in lines. "
+                + (f"Drag the slider to replay it game by game. {story}"
                    if played else story))
         return {"__PAGEURL__": url,
-                "__OGTITLE__": f"NBA Season Towers — {season}",
+                "__OGTITLE__": f"NBA Playoff Race — {season}",
                 "__OGDESC__": desc,
-                "__OGALT__": f"Thirty NBA teams drawn as towers on a shared baseline, {season}"}
+                "__OGALT__": f"The NBA playoff race by conference, {season}"}
 
     n = len(payload.get("players") or [])
     if not played:
