@@ -103,11 +103,14 @@ body.race #wrap,body.reg #wrap{display:flex;flex-direction:column}
 .rgrow .rec{color:var(--dim);text-align:right}
 .rgrow:hover{background:rgba(255,255,255,.03)}
 .rgcells{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));
-  grid-template-rows:minmax(0,1fr);gap:1px;min-width:0}
+  grid-template-rows:minmax(0,1fr);gap:1px;min-width:0;align-items:center}
 /* The cells fill the row's height. The rule above centres the row's labels, and caught
    this strip too -- which shrank every box to the height of its 6.5px text. */
 .rgrow > .rgcells{align-self:stretch}
-.rgc{display:grid;place-items:center;min-width:0;margin:1px 0;border-radius:2px;
+/* Boxes take ~60% of the row, centred: the row height is unchanged and the dark gap
+   between one team's season and the next is what separates them -- full-height boxes
+   ran thirty rows together into one wall of colour. */
+.rgc{display:grid;place-items:center;min-width:0;height:60%;min-height:11px;border-radius:2px;
   font-size:6.5px;line-height:1;font-weight:700;letter-spacing:-.02em;white-space:nowrap;
   overflow:hidden;color:#fff;font-style:normal}
 .rgc.w{background:color-mix(in srgb,var(--win) 70%,#000)}
