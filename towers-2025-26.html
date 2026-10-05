@@ -97,12 +97,16 @@ body.race #wrap,body.reg #wrap{display:flex;flex-direction:column}
 .rgrow{flex:1 1 0;min-height:21px;display:grid;align-items:stretch;gap:5px;
   grid-template-columns:16px 19px 42px 44px minmax(0,1fr);font-size:13px;line-height:1;
   font-variant-numeric:tabular-nums}
-.rgrow > span,.rgrow > img{align-self:center}
+/* The name is a link, so it has to be named here too: left out, it stretched to the
+   row's full height and sat its letters at the top, above the record beside it. */
+.rgrow > span,.rgrow > img,.rgrow > a{align-self:center}
 .rgrow img{width:19px;height:19px;object-fit:contain;background:rgba(255,255,255,.07);border-radius:50%}
 .rgrow .rk{color:var(--dim);text-align:right;font-size:10px}
 .rgrow .ab{font-weight:700;letter-spacing:.01em;color:var(--ink);text-decoration:none;
-  white-space:nowrap;border-bottom:1px dotted transparent}
-.rgrow .ab:hover{border-bottom-color:currentColor}
+  white-space:nowrap}
+/* An underline, not a bottom border: the border added a pixel to the box and lifted the
+   letters half a pixel above the record beside them. */
+.rgrow .ab:hover{text-decoration:underline dotted;text-underline-offset:2px}
 .rgrow.champ .ab{color:var(--gold)}
 .rgrow .rec{color:var(--dim);text-align:right}
 .rgrow:hover{background:rgba(255,255,255,.03)}
@@ -120,16 +124,15 @@ body.race #wrap,body.reg #wrap{display:flex;flex-direction:column}
 .rgc.w{background:color-mix(in srgb,var(--win) 70%,#000)}
 .rgc.l{background:color-mix(in srgb,var(--loss) 80%,#000)}
 .rgc.u{background:rgba(150,166,205,.1);color:rgba(232,236,245,.42)}
-/* Point at a team's crest or letters and the grid goes quiet except for that team's
-   games: its own row, and every box against it in the other twenty-nine -- so its
-   season is readable from both sides. Those keep the row team's colours: in Boston's
-   row a green DET is a game Boston won.
+/* Point at a team's crest or letters and every other row goes quiet, so that one
+   season stands alone. (Lighting its games inside the other rows as well was tried
+   and dropped: it scattered the eye rather than focusing it.)
    Speed matters with 2,460 boxes. The first version used :has(:hover), which made the
    browser re-match every box on every hover change, and faded each one with its own
-   opacity transition. Now one class goes on the grid when you enter or leave a label
-   (not on every mouse move), about 82 boxes get marked, and the rest are dimmed by
-   swapping their colour -- a plain repaint, no layers, no animation. */
-.rggrid.focus .rgrow:not(.hot) .rgc:not(.hot){background:rgba(150,166,205,.06);
+   opacity transition. Now one class goes on the grid and one on the row when you enter
+   or leave a label -- never per mouse move -- and the other boxes are dimmed by
+   swapping their colour: a plain repaint, no layers, no animation. */
+.rggrid.focus .rgrow:not(.hot) .rgc{background:rgba(150,166,205,.06);
   color:rgba(232,236,245,.14)}
 .rgaxis{flex:0 0 auto;display:grid;gap:5px;grid-template-columns:16px 19px 42px 44px minmax(0,1fr);
   margin-bottom:1px}
@@ -1071,8 +1074,7 @@ function regHtml(){
       if (!g) return '<span class="rgc u"></span>';
       // Past the slider, a game has not happened yet -- whatever the final result was.
       const k = i < G && g.res ? (g.res === 'W' ? 'w' : 'l') : 'u';
-      return `<span class="rgc ${k}" data-i="${i}" data-o="${esc(g.opp || '')}">${
-        esc(String(g.opp || '').slice(0, 3))}</span>`;
+      return `<span class="rgc ${k}" data-i="${i}">${esc(String(g.opp || '').slice(0, 3))}</span>`;
     }).join('');
     return `<div class="rgrow${r.champ ? ' champ' : ''}" data-ab="${r.t.abbr}">
       <span class="rk">${rank}</span>
@@ -1251,7 +1253,6 @@ function focusTeam(ab){
   if (!ab) return;
   const row = grid.querySelector(`.rgrow[data-ab="${ab}"]`);
   if (row) row.classList.add('hot');
-  grid.querySelectorAll(`.rgc[data-o="${ab}"]`).forEach(e => e.classList.add('hot'));
 }
 document.getElementById('wrap').addEventListener('mouseover', e => {
   if (VIEW !== 'reg') return;
