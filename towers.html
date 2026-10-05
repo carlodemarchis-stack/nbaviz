@@ -92,13 +92,17 @@ body.race #wrap,body.reg #wrap{display:flex;flex-direction:column}
 .rggrid{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 .rgconf{flex:0 0 auto;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
   padding:5px 0 3px;border-bottom:1px solid var(--line);margin-bottom:2px}
+/* Name and record as large as the row will take: they are what a reader scans down
+   for, and the boxes beside them only need room for three small letters. */
 .rgrow{flex:1 1 0;min-height:21px;display:grid;align-items:stretch;gap:7px;
-  grid-template-columns:16px 18px 36px 42px minmax(0,1fr);font-size:11px;
+  grid-template-columns:16px 20px 54px 58px minmax(0,1fr);font-size:15px;line-height:1;
   font-variant-numeric:tabular-nums}
 .rgrow > span,.rgrow > img{align-self:center}
-.rgrow img{width:17px;height:17px;object-fit:contain;background:rgba(255,255,255,.07);border-radius:50%}
+.rgrow img{width:19px;height:19px;object-fit:contain;background:rgba(255,255,255,.07);border-radius:50%}
 .rgrow .rk{color:var(--dim);text-align:right;font-size:10px}
-.rgrow .ab{font-weight:700;letter-spacing:.02em}
+.rgrow .ab{font-weight:700;letter-spacing:.01em;color:var(--ink);text-decoration:none;
+  white-space:nowrap;border-bottom:1px dotted transparent}
+.rgrow .ab:hover{border-bottom-color:currentColor}
 .rgrow.champ .ab{color:var(--gold)}
 .rgrow .rec{color:var(--dim);text-align:right}
 .rgrow:hover{background:rgba(255,255,255,.03)}
@@ -107,16 +111,16 @@ body.race #wrap,body.reg #wrap{display:flex;flex-direction:column}
 /* The cells fill the row's height. The rule above centres the row's labels, and caught
    this strip too -- which shrank every box to the height of its 6.5px text. */
 .rgrow > .rgcells{align-self:stretch}
-/* Boxes take ~60% of the row, centred: the row height is unchanged and the dark gap
-   between one team's season and the next is what separates them -- full-height boxes
-   ran thirty rows together into one wall of colour. */
-.rgc{display:grid;place-items:center;min-width:0;height:60%;min-height:11px;border-radius:2px;
+/* Boxes only as tall as their three letters, centred in the row: the row height is
+   unchanged and the dark band between one team's season and the next is what separates
+   them -- full-height boxes ran thirty rows together into one wall of colour. */
+.rgc{display:grid;place-items:center;min-width:0;padding:2px 0;border-radius:2px;
   font-size:6.5px;line-height:1;font-weight:700;letter-spacing:-.02em;white-space:nowrap;
   overflow:hidden;color:#fff;font-style:normal}
 .rgc.w{background:color-mix(in srgb,var(--win) 70%,#000)}
 .rgc.l{background:color-mix(in srgb,var(--loss) 80%,#000)}
 .rgc.u{background:rgba(150,166,205,.1);color:rgba(232,236,245,.42)}
-.rgaxis{flex:0 0 auto;display:grid;gap:7px;grid-template-columns:16px 18px 36px 42px minmax(0,1fr);
+.rgaxis{flex:0 0 auto;display:grid;gap:7px;grid-template-columns:16px 20px 54px 58px minmax(0,1fr);
   margin-bottom:1px}
 .rgaxis .tx{position:relative;height:11px}
 .rgaxis .tx span{position:absolute;transform:translateX(-50%);font-size:9px;color:var(--dim)}
@@ -156,7 +160,7 @@ body.race #wrap,body.reg #wrap{display:flex;flex-direction:column}
 .rcrow .rk{color:var(--dim);text-align:right;font-size:10.5px}
 .rcrow .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rcrow .rec{text-align:right;color:var(--dim);letter-spacing:.01em}
-/* Wins first and bright, losses quieter: the record leads with what a team has won. */
+/* The bigger number bright, the other quiet -- see recHtml(). */
 .rcrow .rec b,.rgrow .rec b{color:#fff;font-weight:700}
 .rcrow .tag{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-align:center;
   border-radius:4px;padding:2px 0;color:#ff8b84;
@@ -949,7 +953,7 @@ function raceHtml(){
         ${lines && c.cutPO != null ? `<i class="cut" style="left:${pc(c.cutPO)}%"></i>` : ''}
         ${labels(r)}
       </span>
-      <span class="rec"><b>${r.w}</b>-${r.l}</span>${tag}
+      <span class="rec">${recHtml(r)}</span>${tag}
     </div>`;
   };
   const subhd = txt => `<div class="rcsub">${txt}</div>`;
@@ -1031,6 +1035,13 @@ function gnoLabel(){
     ? `game <b>${G}</b> of ${MAXG}` : `<b>${MAXG}</b> games scheduled`;
 }
 
+/* The record, with the larger of its two numbers in white -- wins for a winning team,
+   losses for a losing one, so the column says at a glance which way a season went.
+   Level records light both, except 0-0, which says nothing yet. */
+const recHtml = r => r.w > r.l ? `<b>${r.w}</b>-${r.l}`
+  : r.l > r.w ? `${r.w}-<b>${r.l}</b>`
+  : r.w ? `<b>${r.w}</b>-<b>${r.l}</b>` : `${r.w}-${r.l}`;
+
 /* ---------- the regular season, every game ---------- */
 let REGROWS = {};
 function regHtml(){
@@ -1053,8 +1064,9 @@ function regHtml(){
     return `<div class="rgrow${r.champ ? ' champ' : ''}" data-ab="${r.t.abbr}">
       <span class="rk">${rank}</span>
       <img src="${crest(r.t.abbr)}" alt="" loading="lazy">
-      <span class="ab">${esc(r.t.abbr)}${r.champ ? '★' : ''}</span>
-      <span class="rec"><b>${r.w}</b>-${r.l}</span>
+      <a class="ab" href="index-${SEASON}.html#team-${r.t.abbr}"
+        title="${esc(r.t.name)} — open the team card">${esc(r.t.abbr)}${r.champ ? '★' : ''}</a>
+      <span class="rec">${recHtml(r)}</span>
       <span class="rgcells" style="--n:${N}">${cells}</span></div>`;
   };
   // Same order as the race at the same game, so switching views never reshuffles.
