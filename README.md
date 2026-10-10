@@ -53,7 +53,7 @@ Their client requirements are mutually exclusive — a shared fetch helper would
 | **cdn.nba.com** | plain curl | crest SVGs, 1040×760 headshot cutouts |
 
 ESPN is the backbone **because it is the only one that works headlessly** — when 2026-27
-tips off on 22 Oct 2026, the update job has to run without a browser.
+tips off on 20 Oct 2026 (DET–BOS and NY–PHI), the update job has to run without a browser.
 
 ### Two counter-intuitive client rules
 
