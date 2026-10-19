@@ -1,0 +1,53 @@
+# Nightly: pull the live season's new nights from ESPN, rebuild, validate, publish.
+# ESPN needs no key and serves urllib's default User-Agent (and 403s a browser one),
+# so this runs headless on a GitHub runner. Nothing is committed unless the gate passes.
+#
+# What it cannot do: shot charts. Those come from stats.nba.com, which only answers a
+# real browser sitting on an nba.com page -- 2026-27 player cards draw without them
+# until they are harvested by hand (README, "The three data sources").
+name: update-season
+on:
+  schedule:
+    # GitHub starts scheduled runs hours late, and the top of the hour is its busiest
+    # moment, so these sit at :47. West Coast games end about 05:00-06:00 UTC: the first
+    # two passes land the night by European morning even with the queue, the third
+    # catches ESPN's corrections and late box scores.
+    - cron: "47 4 * * *"
+    - cron: "47 6 * * *"
+    - cron: "47 13 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: update-season
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      LABEL: "2026-27"     # the season as the app names it
+      YEAR: "2027"         # ...and as ESPN does: by the year it ENDS
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install pillow
+      - name: Fetch
+        run: |
+          python3 tools/fetch_espn.py schedule $YEAR
+          python3 tools/fetch_espn.py standings $YEAR
+          python3 tools/fetch_players.py $YEAR
+          python3 tools/fetch_boxscores.py $LABEL
+          python3 tools/build_players.py $LABEL
+      - name: Build and gate
+        run: |
+          python3 tools/build_cards.py $LABEL
+          python3 tools/fetch_images.py season $LABEL
+          python3 tools/validate.py $LABEL
+          python3 render.py 2025-26
+      - name: Publish if anything changed
+        run: |
+          git add -A data img/headw *.html
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git -c user.name="nba-bot" -c user.email="actions@users.noreply.github.com" \
+            commit -m "Update $LABEL through $(date -u +%Y-%m-%d)"
+          git push

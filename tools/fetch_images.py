@@ -3,6 +3,7 @@
 
     python3 tools/fetch_images.py crests
     python3 tools/fetch_images.py heads        # needs data/nba_ids.json
+    python3 tools/fetch_images.py season 2026-27   # missing photos for a live season
 
 cdn.nba.com serves images to plain curl happily -- it is only the /static/json/ paths
 that are 403. Crests are real SVGs (vector, so they stay crisp at any card size) and
@@ -77,6 +78,57 @@ def heads(limit=120):
         print("   ", b)
 
 
+def season_heads(label):
+    """Photos for everyone on the live season's rosters and in its deck who has none yet.
+
+    The official NBA cutout when we know his NBA id (build_players resolves those by
+    name, against an index that only covers last season's players); otherwise ESPN's
+    headshot, which every rookie and newcomer has. The two are different crops of the
+    same idea, a transparent head-and-shoulders, so they sit together on a tile well
+    enough -- and a tile without either falls back to initials. Only missing photos are
+    fetched, so this is cheap to run every night.
+    """
+    have = {f[:-5] for f in os.listdir(os.path.join(IMG, "headw")) if f.endswith(".webp")}
+    want = {}
+    rp = os.path.join(DATA, f"rosters-{label}.json")
+    if os.path.exists(rp):
+        for players in json.load(open(rp)).values():
+            for a in players:
+                want[a["id"]] = {"name": a["name"], "espn": a.get("headshot")}
+    dp = os.path.join(DATA, f"deck-players-{label}.json")
+    if os.path.exists(dp):
+        for p in json.load(open(dp)):
+            want.setdefault(p["id"], {"name": p["name"]})["nba"] = p.get("nbaId")
+    todo = {pid: w for pid, w in want.items() if pid not in have}
+    out = os.path.join(IMG, "head")
+
+    def one(item):
+        pid, w = item
+        path = os.path.join(out, f"{pid}.png")
+        tried = []
+        for url in ([f"https://cdn.nba.com/headshots/nba/latest/1040x760/{w['nba']}.png"]
+                    if w.get("nba") else []) + [
+                    w.get("espn") or
+                    f"https://a.espncdn.com/i/headshots/nba/players/full/{pid}.png"]:
+            r = grab(url, path)
+            if not str(r).startswith("FAIL"):
+                return pid, w["name"], r
+            tried.append(r)
+        return pid, w["name"], "FAIL " + " / ".join(tried)
+
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        res = list(ex.map(one, todo.items()))
+    bad = [r for r in res if str(r[2]).startswith("FAIL")]
+    print(f"  {label}: {len(want)} players, {len(want) - len(todo)} already had a photo, "
+          f"{len(res) - len(bad)} fetched, {len(bad)} still without one")
+    for b in bad[:6]:
+        print("   ", b[1], b[2][:90])
+    # Only when something new arrived: the two or three players with no photo anywhere
+    # are retried every night, and on a fresh runner img/head does not exist at all.
+    if len(res) > len(bad):
+        optimise()
+
+
 def optimise(width=560, quality=82):
     """PNG cutouts -> webp at card size.
 
@@ -87,6 +139,8 @@ def optimise(width=560, quality=82):
     src = os.path.join(IMG, "head")
     dst = os.path.join(IMG, "headw")
     os.makedirs(dst, exist_ok=True)
+    if not os.path.isdir(src):               # gitignored: absent on a fresh checkout
+        return
     before = after = 0
     n = 0
     for f in sorted(os.listdir(src)):
@@ -112,5 +166,7 @@ if __name__ == "__main__":
         crests()
     elif cmd == "optimise":
         optimise()
+    elif cmd == "season":
+        season_heads(sys.argv[2])
     else:
         heads(int(sys.argv[2]) if len(sys.argv) > 2 else 120)

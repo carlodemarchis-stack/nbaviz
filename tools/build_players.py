@@ -97,7 +97,8 @@ def main(label):
         print(f"  {len(teamless)} scored but never appear in a box score: {teamless[:4]}")
 
     # The bug this whole module exists to prevent -- spot-check it loudly.
-    for name, expect in (("Jaylen Brown", "BOS"), ("Kawhi Leonard", "LAC")):
+    for name, expect in ((("Jaylen Brown", "BOS"), ("Kawhi Leonard", "LAC"))
+                         if label == "2025-26" else ()):
         got = next((p["team"] for p in deck if p["name"] == name), None)
         flag = "ok" if got == expect else "WRONG"
         print(f"  {flag}: {name} 2025-26 team = {got} (expected {expect})")

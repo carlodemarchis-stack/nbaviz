@@ -133,12 +133,21 @@ def seeds(label):
     by_espn = {v["espnId"]: k for k, v in teams.items()}
     out = {}
 
+    year = int(label.split('-')[0]) + 1
+
     def walk(n):
-        for e in n.get("standings", {}).get("entries", []):
+        block = n.get("standings", {})
+        # Only the requested season's REGULAR season counts. ESPN will hand back the
+        # preseason table (type 1) or another season if asked loosely, and a 0-0 table
+        # on the eve of opening night "seeds" every team 0 -- none of which is a seed.
+        right = (block.get("season") in (None, year)
+                 and block.get("seasonType") in (None, 2))
+        for e in block.get("entries", []) if right else []:
             ab = by_espn.get(e["team"]["id"])
             st = {s["name"]: s.get("value", s.get("displayValue")) for s in e["stats"]}
-            if ab and st.get("playoffSeed") is not None:
-                out[ab] = int(float(st["playoffSeed"]))
+            seed = st.get("playoffSeed")
+            if ab and seed is not None and int(float(seed)) >= 1:
+                out[ab] = int(float(seed))
         for c in n.get("children", []):
             walk(c)
     walk(json.load(open(raw)))
@@ -234,6 +243,9 @@ def main(label):
     sched = load(f"schedule-{label}.json")
     po = load(f"playoffs-{label}.json") or {}
     deck = load(f"deck-players-{label}.json") or []
+    # Only a season still being played has one (fetch_players writes it for no other):
+    # who is on each team TODAY. See the roster block below.
+    current = load(f"rosters-{label}.json") or {}
     box = load(f"boxlines-{label}.json.gz", gz=True) or {}
     pobox = load(f"boxlines-po-{label}.json.gz", gz=True) or {}
     seed = seeds(label)
@@ -320,6 +332,12 @@ def main(label):
         home = [g for g in done if g["ha"] == "H"]
         away = [g for g in done if g["ha"] == "A"]
         margins = sorted(done, key=lambda g: g["us"] - g["them"])
+        # Biggest WIN and heaviest DEFEAT, taken from wins and defeats. The widest margin
+        # overall is only a win once a team has won something: on opening week a 0-2
+        # team's "biggest win" was its narrowest loss, and a 2-0 team's "heaviest
+        # defeat" was a win. None until there is one.
+        wins = [g for g in margins if g["res"] == "W"]
+        losses = [g for g in margins if g["res"] == "L"]
 
         roster = []
         for pid, byteam in agg.items():
@@ -335,6 +353,20 @@ def main(label):
                            "ppg": r1(pts / gp), "rpg": r1(reb / gp),
                            "apg": r1(ast / gp), "mpg": r1(mins / gp)})
         roster.sort(key=lambda r: -r["ppg"])
+        # The live season: the roster is who is on the team TODAY, from ESPN, with this
+        # team's box-score totals attached to anyone who has played for it. A player who
+        # played here and has since been waived or traded drops off -- the card shows the
+        # team as it stands, and his games stay on his own player card. Anyone yet to
+        # play carries g:0 and the card draws him without numbers. A finished season has
+        # no current roster and keeps the who-actually-played roster above.
+        if ab in current:
+            played = {r["id"]: r for r in roster}
+            zero = {"g": 0, "pts": 0, "ast": 0, "reb": 0,
+                    "ppg": 0, "rpg": 0, "apg": 0, "mpg": 0}
+            roster = [played.get(a["id"]) or {"id": a["id"], **zero} for a in current[ab]]
+            num = lambda r: int(next((a["jersey"] for a in current[ab] if a["id"] == r["id"]
+                                      and str(a.get("jersey") or "").isdigit()), 999))
+            roster.sort(key=lambda r: (-r["ppg"], -r["g"], num(r)))
 
         out_teams.append({
             "abbr": ab, "name": t["name"], "city": t["city"], "nick": t["nick"],
@@ -348,12 +380,12 @@ def main(label):
             "away": f"{sum(1 for g in away if g['res'] == 'W')}-"
                     f"{sum(1 for g in away if g['res'] == 'L')}",
             "streak": streaks(counting),
-            "best": ({"opp": margins[-1]["opp"], "us": margins[-1]["us"],
-                      "them": margins[-1]["them"], "date": margins[-1]["date"][:10]}
-                     if margins else None),
-            "worst": ({"opp": margins[0]["opp"], "us": margins[0]["us"],
-                       "them": margins[0]["them"], "date": margins[0]["date"][:10]}
-                      if margins else None),
+            "best": ({"opp": wins[-1]["opp"], "us": wins[-1]["us"],
+                      "them": wins[-1]["them"], "date": wins[-1]["date"][:10]}
+                     if wins else None),
+            "worst": ({"opp": losses[0]["opp"], "us": losses[0]["us"],
+                       "them": losses[0]["them"], "date": losses[0]["date"][:10]}
+                      if losses else None),
             # The full 82 in order -- this is what draws the mini tower on the card
             # and the big towers on the towers page.
             "games": [{"g": g["g"], "opp": g["opp"], "ha": g["ha"], "res": g["res"],
@@ -540,6 +572,12 @@ def main(label):
     # 100 already went through jersey_of(); the roster tiles show the other 478, so they
     # need it too or a third of the league is labelled with next season's number.
     names = {p["id"]: [p["name"], p["pos"] or "", jersey_of(p, worn) or ""] for p in deck}
+    # Players on a live roster who have not scored yet are in no deck, so they need a
+    # name from the roster itself -- or their tiles would read "--".
+    for players in current.values():
+        for a in players:
+            names.setdefault(a["id"], [a.get("name") or "", a.get("pos") or "",
+                                       a.get("jersey") or ""])
 
     nights = big_nights(sched, box, uncounted, deck)
 

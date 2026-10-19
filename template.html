@@ -311,6 +311,10 @@ a{color:inherit}
 /* Three boxes across the foot of the photo, each naming its own stat -- stacked up the
    left they read as a list of unlabelled numbers, and only the first one said what it
    was. */
+/* A player yet to play has no numbers: his position sits where the pills would. */
+.pmpos{position:absolute;left:5px;bottom:5px;z-index:2;padding:2px 6px 3px;border-radius:4px;
+  font-size:9px;font-weight:700;letter-spacing:.1em;color:#fff;background:rgba(7,9,16,.74);
+  border:1px solid var(--tc)}
 .pmpills{position:absolute;left:0;right:0;bottom:0;z-index:2;display:grid;
   grid-template-columns:repeat(3,1fr);gap:3px;padding:16px 5px 5px;
   background:linear-gradient(180deg,transparent,rgba(7,9,16,.78) 58%)}
@@ -838,6 +842,10 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
 <script>
 const D = /*__DATA__*/{};
 const SEASON = D.season;
+/* Has every regular-season game been played? Until then "no playoff run" means nothing
+   yet -- not "missed the playoffs" -- and the cards must not say otherwise. */
+const SEASON_DONE = (D.teams || []).length > 0
+  && D.teams.every(t => (t.games || []).every(g => g.res || g.counts === false));
 const NAMES = D.names || {};
 const TEAMS = {}; D.teams.forEach(t => TEAMS[t.abbr] = t);
 /* Which series the game chart is showing. Global, so it carries from card to card, and
@@ -1574,18 +1582,23 @@ function teamCard(t){
         ).join('')}</span></div>`).join('')}
     </div>`
     : `<div class="box"><div class="k">Playoffs</div>
-       <div style="font-size:12px;color:var(--dim);margin-top:3px">Did not qualify.</div></div>`;
+       <div style="font-size:12px;color:var(--dim);margin-top:3px">${SEASON_DONE
+         ? 'Did not qualify.' : 'Still to come — the regular season runs to April.'}</div></div>`;
 
   /* Six across, three down. Every roster in the data is 18 or fewer -- 28 teams have
      exactly 18, Houston 16, Miami 17 -- so a whole squad fits and nobody is cut.
      Click behaviour is unchanged: a top-100 player jumps to his card in the deck,
      everyone else opens the lazy-loaded one from data/roster/. */
+  // A season under way lists who is on the team today; a finished one, who played.
+  // Until anyone has played there is nothing to sort by, so no tabs.
+  const anyPlayed = t.roster.some(r => r.g);
   const roster = t.roster.length ? `<div class="rost panel" style="padding:11px 12px">
-      <div class="rhd"><span>Who played</span>
-        <span class="ltabs">${ROSTKEY.map(k =>
+      <div class="rhd"><span>${SEASON_DONE ? 'Who played' : 'Roster'}</span>
+        ${anyPlayed ? `<span class="ltabs">${ROSTKEY.map(k =>
           `<button class="ltab ${k[0] === ROSTBY ? 'on' : ''}"
             onclick="setRosterBy('${k[0]}')">${k[0]}</button>`).join('')}
-          <span class="rhk">per game</span></span></div>
+          <span class="rhk">per game</span></span>`
+          : '<span class="rhk">yet to play</span>'}</div>
       ${rosterDeck(t)}</div>` : '';
 
   return teamBody(t, {roster, champ, cup, intl, po, rec});
@@ -1635,16 +1648,16 @@ function rosterDeck(t){
                  : k != null ? `onclick="goTail(${k});return false"`
                  : 'onclick="return false"';
         return `<a class="pmini" href="${at ? '#' + at : '#'}" ${go} style="--tc:${winColor(t)}"
-            title="${esc(nm[0])} · ${esc(nm[1])} · ${r.g} games · ${r.ppg} pts, ${
-              r.apg} ast, ${r.rpg} reb">
+            title="${esc(nm[0])} · ${esc(nm[1])} · ${r.g ? `${r.g} games · ${r.ppg} pts, ${
+              r.apg} ast, ${r.rpg} reb` : 'yet to play'}">
           <span class="pmshot"><i class="pmfb">${ini}</i><img src="${head(r.id)}" alt=""
             loading="lazy" onerror="this.style.display='none'">${nm[2]
               ? `<b class="pmwm">${esc(nm[2])}</b>` : ''}
-            <b class="pmtot">${(r[tot] || 0).toLocaleString('en-US')}<i>${
+            ${r.g ? `<b class="pmtot">${(r[tot] || 0).toLocaleString('en-US')}<i>${
               ROSTBY} total</i></b>
             <span class="pmpills">${ROSTKEY.map(k =>
               `<b class="${k[0] === ROSTBY ? 'on' : ''}">${r[k[1]]}<i>${k[0]}</i></b>`
-              ).join('')}</span></span>
+              ).join('')}</span>` : `<span class="pmpos">${esc(nm[1] || '')}</span>`}</span>
           <span class="pmname"><span>${esc(nm[0])}</span>${nm[2]
             ? `<b class="pmno">${esc(nm[2])}</b>` : ''}</span>
         </a>`;
@@ -1682,13 +1695,15 @@ function teamBody(t, {roster, champ, cup, intl, po, rec}){
             <div><div class="v">${t.streak.W}</div><div class="k">Best run</div></div>
             <div><div class="v">${t.streak.L}</div><div class="k">Worst run</div></div>
           </div></div>
-          ${(t.best && t.worst) ? `<div class="box"><div class="kv" style="grid-template-columns:1fr 1fr">
-            <div><div class="v" style="font-size:15px">${t.best.us}-${t.best.them}
+          ${(t.best || t.worst) ? `<div class="box"><div class="kv" style="grid-template-columns:1fr 1fr">
+            <div>${t.best ? `<div class="v" style="font-size:15px">${t.best.us}-${t.best.them}
               <small>v ${tlink(t.best.opp, esc(t.best.opp))}</small></div>
-              <div class="k">Biggest win · ${t.best.date}</div></div>
-            <div><div class="v" style="font-size:15px">${t.worst.us}-${t.worst.them}
+              <div class="k">Biggest win · ${t.best.date}</div>`
+              : '<div class="v" style="font-size:15px;color:var(--dim)">—</div><div class="k">No win yet</div>'}</div>
+            <div>${t.worst ? `<div class="v" style="font-size:15px">${t.worst.us}-${t.worst.them}
               <small>v ${tlink(t.worst.opp, esc(t.worst.opp))}</small></div>
-              <div class="k">Heaviest defeat · ${t.worst.date}</div></div>
+              <div class="k">Heaviest defeat · ${t.worst.date}</div>`
+              : '<div class="v" style="font-size:15px;color:var(--dim)">—</div><div class="k">No defeat yet</div>'}</div>
           </div></div>` : ''}
           ${po}
           ${(cup || intl.length) ? `<div class="box"><div class="k">Also this season</div>
@@ -1738,7 +1753,7 @@ function playerCard(p){
             ${(() => { const e = poEnding(t); return `<span class="jwl" title="${traded
                 ? `Record across both teams in the ${p.gp} games he played`
                 : `${esc(t.name || p.team)}'s record in the ${p.gp} games he played`}"
-              >${p.wl ? `${p.wl[0]}-${p.wl[1]}<i class="jsep">·</i>` : ''}<i
+              >${p.wl ? `${p.wl[0]}-${p.wl[1]}${e.txt ? '<i class="jsep">·</i>' : ''}` : ''}<i
                 class="jpo${e.champ ? ' champ' : ''}"${e.miss
                   ? ' title="Missed the playoffs — went to the draft lottery"' : ''
                 }>${e.txt}</i></span>`; })()}</div>
@@ -2024,7 +2039,9 @@ function poEnding(t){
   const o = (t && t.po && t.po.outcome) || '';
   // The league's own word for missing out: those teams go to the draft lottery.
   // Names a phase like every other value here instead of negating one.
-  if (!o) return {txt: 'Lottery', champ: false, miss: true};
+  // Before the last regular-season game no run is not a miss -- say nothing yet.
+  if (!o) return SEASON_DONE ? {txt: 'Lottery', champ: false, miss: true}
+                             : {txt: '', champ: false};
   if (o === 'CHAMPIONS') return {txt: 'Champions', champ: true};
   const phase = o.replace(/^(Lost|Won) the /, '')
                  .replace(/^NBA Finals$/, 'Finals')

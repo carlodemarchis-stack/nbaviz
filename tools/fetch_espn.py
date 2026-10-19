@@ -52,15 +52,34 @@ def get(url, tries=4):
 
 
 def cached(name, url):
+    """Fetch once, then serve from scratch/raw forever -- unless NBA_FRESH=1.
+
+    Forever is right for a finished season and wrong for the live one: run locally
+    without NBA_FRESH it replays whatever was fetched first. The nightly job runs on a
+    fresh runner with an empty cache, so it is always fresh there regardless."""
     os.makedirs(RAW, exist_ok=True)
     p = os.path.join(RAW, name + ".json")
-    if os.path.exists(p):
+    if os.path.exists(p) and os.environ.get("NBA_FRESH") != "1":
         with open(p) as f:
             return json.load(f)
     d = get(url)
     with open(p, "w") as f:
         json.dump(d, f)
     return d
+
+
+def do_standings(year):
+    """ESPN's conference standings, kept raw for build_cards' seeds().
+
+    seasontype=2 is not optional. Without it, before opening night ESPN serves the
+    PRESEASON table -- New York 1-4 and "seeded" 15th off exhibition games."""
+    d = cached(f"espn_standings_{year}",
+               "https://site.web.api.espn.com/apis/v2/sports/basketball/nba/standings"
+               f"?season={year}&seasontype=2")
+    blocks = [c.get("standings", {}) for c in d.get("children", [])]
+    print(f"  standings {year}: " + ", ".join(
+        f"{b.get('name') or '?'} season {b.get('season')} type {b.get('seasonType')}"
+        for b in blocks))
 
 
 def write(name, obj):
@@ -276,5 +295,7 @@ if __name__ == "__main__":
         do_schedule(int(sys.argv[2]))
     elif cmd == "playoffs":
         do_playoffs(int(sys.argv[2]))
+    elif cmd == "standings":
+        do_standings(int(sys.argv[2]))
     else:
         sys.exit(__doc__)

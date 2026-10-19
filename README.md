@@ -64,6 +64,46 @@ tips off on 20 Oct 2026 (DET–BOS and NY–PHI), the update job has to run with
   origin other than nba.com. Fetching works from a browser pane sitting on nba.com;
   *writing those bytes to disk* is still unsolved (see `tools/harvest_server.py`).
 
+## The live season (2026-27): the nightly job
+
+`.github/workflows/update.yml` runs at 04:47, 06:47 and 13:47 UTC (and on demand:
+`gh workflow run update.yml`). It fetches schedule, standings, rosters, player lines and
+box scores, rebuilds 2026-27, fetches any missing photos, runs `validate.py` as the gate,
+re-renders, and commits only if something changed. Locally, the same steps need
+`NBA_FRESH=1` — `fetch_espn.cached()` otherwise replays scratch/raw forever.
+
+- **Rosters.** `fetch_players.py` writes `data/rosters-<label>.json` — today's ESPN
+  rosters — only for a season with games still to play. A team card in a live season
+  lists that roster, with this team's box-score totals attached to anyone who has
+  played for it; a player who has left drops off (his games stay on his own card), and
+  anyone yet to play is drawn without numbers. A finished season keeps the
+  who-actually-played roster.
+- **Photos.** `fetch_images.py season <label>` fetches only missing ones: the official
+  NBA cutout when the player has an NBA id, otherwise ESPN's headshot (every rookie has
+  one). A handful have neither and show initials.
+- **Box scores** already in the committed `boxlines-<label>.json.gz` are reused, except
+  the last three days, which are re-pulled because a summary fetched at the buzzer can
+  be incomplete and ESPN corrects them. The gzip is written with mtime 0 so unchanged
+  data is unchanged bytes and the job does not commit nothing every night.
+- **Not headless:** shot charts (stats.nba.com). 2026-27 player cards draw without them.
+- **Still to do in April:** add `fetch_espn.py playoffs 2027` and the playoff box scores
+  to the job; switch `render.py`'s landing season to 2026-27 once it has enough games.
+
+### Three ESPN behaviours that look like data but are not
+
+1. **Stats for an unstarted season silently come back as the previous one.** Asked for
+   2027 on the eve of 2026-27, `byathlete` answered with every 2025-26 line (Doncic
+   2,143). `requestedSeason.year` says which season it actually served; anything but the
+   one asked for is treated as empty.
+2. **Standings default to the preseason** before opening night (New York 1-4, "seeded"
+   15th). `standings` is fetched with `seasontype=2`, and `seeds()` reads only the
+   requested season's regular season.
+3. **On the eve of the season every seed is 0.** Seeds below 1 are ignored.
+
+The early-season card wording was checked against a sandbox with three days of invented
+results: no "Did not qualify" or "Lottery" until the season is over, no biggest win
+that is a defeat, no tabs on a roster nobody has played for yet.
+
 ## Traps this pipeline already handles
 
 Each of these produced plausible-looking wrong output once.

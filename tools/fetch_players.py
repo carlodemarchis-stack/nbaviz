@@ -42,6 +42,21 @@ def byathlete_page(year, page, stype=2):
 def collect_stats(year, stype=2):
     """Flatten byathlete into {athleteId: {stat: value}} across all pages."""
     first = byathlete_page(year, 1, stype)
+    # Before a season's first game (or its playoffs) the feed comes back with no
+    # pagination and no athletes at all -- an empty season, not an error.
+    if "pagination" not in first:
+        return {}
+    # Before a season starts, ESPN does not return an empty season -- it silently serves
+    # the LAST one instead. Asked for 2027 on the eve of 2026-27, it answered with every
+    # 2025-26 line (Doncic 2,143 points). It does say so: `requestedSeason` carries the
+    # season it actually used. Anything but the one asked for is treated as nothing yet,
+    # or last season's totals would land on this season's cards the moment its first box
+    # scores gave those players a team.
+    got = (first.get("requestedSeason") or {}).get("year")
+    if got is not None and int(got) != int(year):
+        print(f"  NOTE season {year} type {stype}: ESPN served {got} instead -- "
+              f"not started yet, treated as empty")
+        return {}
     pages = first["pagination"]["pages"]
     # The top-level `categories` list names the columns; each athlete's `values`
     # align to it by index, so the names must come from here, not the athlete.
@@ -79,6 +94,28 @@ def do(year):
                 "college": (a.get("college") or {}).get("name"),
                 "exp": (a.get("experience") or {}).get("years"),
             }
+
+    # The CURRENT rosters, written only for a season still being played. ESPN's roster
+    # is always today's, which is exactly right for the live season and exactly wrong for
+    # a finished one (it put Jaylen Brown on Philadelphia beside his 2025-26 Boston
+    # stats) -- so a finished season never gets one, and build_cards falls back to who
+    # actually played.
+    sched_p = os.path.join(DATA, f"schedule-{label}.json")
+    live = os.path.exists(sched_p) and any(
+        not g.get("res") for gs in json.load(open(sched_p)).values() for g in gs)
+    if live:
+        write(f"rosters-{label}.json", {ab: [{
+            "id": a["id"], "name": a.get("displayName"), "short": a.get("shortName"),
+            "jersey": a.get("jersey"), "pos": (a.get("position") or {}).get("abbreviation"),
+            "height": a.get("displayHeight"), "weight": a.get("displayWeight"),
+            "college": (a.get("college") or {}).get("name"),
+            "exp": (a.get("experience") or {}).get("years"), "age": a.get("age"),
+            "headshot": (a.get("headshot") or {}).get("href"),
+        } for a in ath] for ab, ath in rosters.items()})
+        sizes = sorted(len(v) for v in rosters.values())
+        over = {ab: len(v) for ab, v in rosters.items() if len(v) > 18}
+        print(f"  live season: wrote rosters-{label}.json, {sizes[0]}-{sizes[-1]} per team"
+              + (f" -- OVER 18 (cuts not registered yet?): {over}" if over else ""))
 
     rs = collect_stats(year, 2)
     po = collect_stats(year, 3)

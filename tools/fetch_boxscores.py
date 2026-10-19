@@ -135,6 +135,7 @@ def do(label, postseason=False):
     it is only the id list that differs. Written to its own file so a playoff line can
     never be mistaken for a regular-season one downstream.
     """
+    po = sched = {}
     if postseason:
         po = json.load(open(os.path.join(DATA, f"playoffs-{label}.json")))
         gids = sorted({g["id"] for gs in po.values() for g in gs if g.get("res")})
@@ -143,16 +144,33 @@ def do(label, postseason=False):
         gids = sorted({g["id"] for gs in sched.values() for g in gs if g["res"]})
     print(f"  {len(gids)} completed {'playoff ' if postseason else ''}games to pull")
 
-    got, fail, t0 = {}, [], time.time()
+    # Reuse what is already committed. scratch/ is gitignored, so the nightly job starts
+    # every run with an empty cache and would otherwise re-pull every game of the season
+    # (~1,230 by April, ~425 KB each). Games from the last three days are pulled again
+    # all the same: a summary fetched straight after the buzzer can be incomplete, and
+    # ESPN corrects box scores for a day or two afterwards.
+    out_p = os.path.join(DATA, f"boxlines{'-po' if postseason else ''}-{label}.json.gz")
+    have = {}
+    if os.path.exists(out_p):
+        with gzip.open(out_p, "rt") as f:
+            have = json.load(f)
+    src = po if postseason else sched
+    when = {g["id"]: (g.get("date") or "")[:10] for gs in src.values() for g in gs}
+    cutoff = time.strftime("%Y-%m-%d", time.gmtime(time.time() - 3 * 86400))
+    keep = {g for g in gids if g in have and when.get(g, "") < cutoff}
+
+    got, fail, t0 = {g: {"g": g, "teams": have[g]} for g in keep}, [], time.time()
+    todo = [g for g in gids if g not in keep]
+    print(f"  {len(keep)} reused from the committed file, {len(todo)} to fetch")
     with ThreadPoolExecutor(max_workers=8) as ex:
-        futs = {ex.submit(one, g): g for g in gids}
+        futs = {ex.submit(one, g): g for g in todo}
         for n, f in enumerate(as_completed(futs), 1):
             gid = futs[f]
             try:
                 got[gid] = f.result()
             except Exception as e:                   # noqa: BLE001
                 fail.append((gid, str(e)[:70]))
-            if n % 200 == 0 or n == len(gids):
+            if n % 200 == 0 or n == len(todo):
                 print(f"    {n}/{len(gids)}  {time.time() - t0:.0f}s  "
                       f"{len(fail)} failed", flush=True)
 
@@ -161,8 +179,11 @@ def do(label, postseason=False):
 
     out = {g: got[g]["teams"] for g in sorted(got)}
     p = os.path.join(DATA, f"boxlines{'-po' if postseason else ''}-{label}.json.gz")
-    with gzip.open(p, "wt") as f:
-        json.dump(out, f, separators=(",", ":"))
+    # mtime=0: gzip stamps the write time into its header, so the same data would come
+    # out as different bytes every night and the nightly job would commit a "change"
+    # that is not one.
+    with open(p, "wb") as raw, gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as gz:
+        gz.write(json.dumps(out, separators=(",", ":")).encode())
     rows = sum(len(r) for t in out.values() for r in t.values())
     print(f"  wrote {os.path.relpath(p, os.path.join(HERE, '..'))}  "
           f"{os.path.getsize(p) / 1024 / 1024:.1f} MB  ({rows} player-games)")
