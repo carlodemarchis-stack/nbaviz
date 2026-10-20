@@ -3,6 +3,7 @@
 
     python3 tools/fetch_images.py crests
     python3 tools/fetch_images.py heads        # needs data/nba_ids.json
+    python3 tools/fetch_images.py nbaroster 2026-27  # this season's official photos
     python3 tools/fetch_images.py season 2026-27   # missing photos for a live season
 
 cdn.nba.com serves images to plain curl happily -- it is only the /static/json/ paths
@@ -99,7 +100,9 @@ def season_heads(label):
     if os.path.exists(dp):
         for p in json.load(open(dp)):
             want.setdefault(p["id"], {"name": p["name"]})["nba"] = p.get("nbaId")
-    todo = {pid: w for pid, w in want.items() if pid not in have}
+    sdir = os.path.join(IMG, "headw", label)
+    seasonal = {f[:-5] for f in os.listdir(sdir)} if os.path.isdir(sdir) else set()
+    todo = {pid: w for pid, w in want.items() if pid not in have and pid not in seasonal}
     out = os.path.join(IMG, "head")
 
     def one(item):
@@ -127,6 +130,140 @@ def season_heads(label):
     # are retried every night, and on a fresh runner img/head does not exist at all.
     if len(res) > len(bad):
         optimise()
+
+
+def _webp(png_bytes, width=560, quality=82):
+    """The same conversion optimise() applies, in memory -- so a fresh download can be
+    compared byte for byte with the photo already on disk."""
+    import io
+    from PIL import Image
+    im = Image.open(io.BytesIO(png_bytes)).convert("RGBA")
+    if im.width > width:
+        im = im.resize((width, round(im.height * width / im.width)), Image.LANCZOS)
+    buf = io.BytesIO()
+    im.save(buf, "WEBP", quality=quality, method=6)
+    return buf.getvalue()
+
+
+def nba_roster_photos(label):
+    """This season's official headshots, kept apart from last season's.
+
+    cdn.nba.com serves one "latest" photo per player, and before 2026-27 it served last
+    season's: Isaiah Joe was on our Pistons card in a Thunder jersey. The NBA has since
+    published the new media-day photos -- 17 of Detroit's 18 had changed. They go in
+    img/headw/<label>/ rather than over the shared files, because the shared file is
+    also what LAST season's cards show: overwriting it would put Joe in Pistons white on
+    the 2025-26 Thunder roster. build_cards lists this folder in the payload, and the
+    template prefers it for that season only.
+
+    NBA ids come from nba.com's standard team page (/team/<nbaTeamId>), the one layout
+    all 30 teams share -- the team-branded /<slug>/roster pages are custom on seven of
+    them. Matched to ESPN ids by name. A photo is fetched once per player, and again
+    only if he changes team; one identical to the shared file is not duplicated.
+    A failure on nba.com is reported and skipped, never fatal: the cards fall back to
+    the shared photos.
+    """
+    import re
+    import unicodedata
+
+    def norm(x):
+        x = unicodedata.normalize("NFKD", x or "")
+        x = "".join(c for c in x if not unicodedata.combining(c)).lower()
+        x = re.sub(r"[.,'`’-]", " ", x)            # nba.com writes "Ernest Udeh, Jr."
+        x = re.sub(r"\b(jr|sr|ii|iii|iv|v)\b", " ", x)
+        return re.sub(r"\s+", " ", x).strip()
+
+    teams = json.load(open(os.path.join(DATA, "teams.json")))
+    rp = os.path.join(DATA, f"rosters-{label}.json")
+    if not os.path.exists(rp):
+        print(f"  no rosters-{label}.json -- not a live season, nothing to do")
+        return
+    rosters = json.load(open(rp))
+    start_year = label.split("-")[0]               # nba.com names 2026-27 "2026"
+    mp = os.path.join(DATA, f"photos-{label}.json")
+    known = json.load(open(mp)) if os.path.exists(mp) else {}
+    sdir = os.path.join(IMG, "headw", label)
+    os.makedirs(sdir, exist_ok=True)
+
+    def page(ab):
+        url = f"https://www.nba.com/team/{teams[ab]['nbaId']}"
+        req = urllib.request.Request(url, headers={"User-Agent": UA})
+        try:
+            with urllib.request.urlopen(req, timeout=40) as r:
+                s = r.read().decode("utf8", "ignore")
+            m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', s, re.S)
+            rows = json.loads(m.group(1))["props"]["pageProps"]["team"]["roster"]
+        except Exception as e:                       # noqa: BLE001
+            return ab, None, f"{e}"[:70]
+        rows = [x for x in rows if str(x.get("SEASON")) == start_year]
+        return ab, rows, None
+
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        pages = list(ex.map(page, teams))
+    failed = [(ab, err) for ab, rows, err in pages if rows is None]
+
+    matched, unmatched, todo = 0, [], []
+    for ab, rows, _ in pages:
+        if not rows:
+            continue
+        ours = {norm(a["name"]): a["id"] for a in rosters.get(ab, [])}
+        for x in rows:
+            eid = ours.get(norm(x.get("PLAYER")))
+            if not eid:
+                unmatched.append(f"{ab} {x.get('PLAYER')}")
+                continue
+            matched += 1
+            prev = known.get(eid)
+            known[eid] = {"nba": x["PLAYER_ID"], "team": ab,
+                          "same": (prev or {}).get("same", False)}
+            fresh = not prev or prev.get("team") != ab
+            # "same" means the NBA had not yet posted his new photo when we last looked
+            # (Isaac Jones, still in Kings purple on opening night). Those few are
+            # looked at again every run, so the new one lands when it is published.
+            have = os.path.exists(os.path.join(sdir, f"{eid}.webp"))
+            if fresh or not have:
+                todo.append((eid, x["PLAYER_ID"], x.get("PLAYER")))
+
+    def fetch(job):
+        eid, nid, name = job
+        url = f"https://cdn.nba.com/headshots/nba/latest/1040x760/{nid}.png"
+        req = urllib.request.Request(url, headers={"User-Agent": UA,
+                                                   "Referer": "https://www.nba.com/"})
+        try:
+            with urllib.request.urlopen(req, timeout=40) as r:
+                b = r.read()
+            if len(b) < 2000:
+                return eid, name, "FAIL tiny"
+            w = _webp(b)
+        except Exception as e:                       # noqa: BLE001
+            return eid, name, f"FAIL {e}"[:70]
+        base = os.path.join(IMG, "headw", f"{eid}.webp")
+        if os.path.exists(base) and open(base, "rb").read() == w:
+            return eid, name, "same"
+        with open(os.path.join(sdir, f"{eid}.webp"), "wb") as f:
+            f.write(w)
+        return eid, name, "new"
+
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        res = list(ex.map(fetch, todo))
+    for eid, name, r in res:
+        if r == "same":
+            known[eid]["same"] = True
+    with open(mp, "w") as f:
+        json.dump(dict(sorted(known.items())), f, separators=(",", ":"))
+
+    n_new = sum(1 for r in res if r[2] == "new")
+    n_same = sum(1 for r in res if r[2] == "same")
+    bad = [r for r in res if str(r[2]).startswith("FAIL")]
+    print(f"  nba.com {label}: {30 - len(failed)}/30 team pages, {matched} players matched, "
+          f"{len(unmatched)} unmatched; checked {len(todo)}: {n_new} new season photos, "
+          f"{n_same} unchanged, {len(bad)} failed")
+    for ab, err in failed[:4]:
+        print(f"    team page {ab} failed: {err}")
+    if unmatched:
+        print(f"    unmatched (no ESPN roster entry by that name): {unmatched[:6]}")
+    for b in bad[:4]:
+        print(f"    {b[1]}: {b[2]}")
 
 
 def optimise(width=560, quality=82):
@@ -168,5 +305,7 @@ if __name__ == "__main__":
         optimise()
     elif cmd == "season":
         season_heads(sys.argv[2])
+    elif cmd == "nbaroster":
+        nba_roster_photos(sys.argv[2])
     else:
         heads(int(sys.argv[2]) if len(sys.argv) > 2 else 120)

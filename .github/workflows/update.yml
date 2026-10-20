@@ -38,10 +38,17 @@ jobs:
           python3 tools/fetch_players.py $YEAR
           python3 tools/fetch_boxscores.py $LABEL
           python3 tools/build_players.py $LABEL
+      - name: Photos
+        # Before the build, so the payload lists every season photo this run fetched.
+        # nbaroster: this season's official media-day shots (never fatal if nba.com
+        # refuses a datacenter IP -- the cards fall back to the shared photos).
+        # season: ESPN headshots for anyone still without any photo.
+        run: |
+          python3 tools/fetch_images.py nbaroster $LABEL
+          python3 tools/fetch_images.py season $LABEL
       - name: Build and gate
         run: |
           python3 tools/build_cards.py $LABEL
-          python3 tools/fetch_images.py season $LABEL
           python3 tools/validate.py $LABEL
           python3 render.py 2025-26
       - name: Publish if anything changed

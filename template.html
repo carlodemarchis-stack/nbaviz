@@ -902,7 +902,12 @@ function winColor(t){
   const c = [n>>16, (n>>8)&255, n&255].map(v => Math.min(255, Math.round(v*k + 62)));
   return `rgb(${c.join(',')})`;
 }
-const head  = id => `img/headw/${id}.webp`;
+/* A player's photo for THIS season when there is one (the NBA's new media-day shots,
+   in img/headw/<season>/), otherwise the shared file. Shared files stay as they were,
+   because they are what the earlier season's cards show -- replacing them would dress
+   last season's Thunder in this season's Pistons jerseys. */
+const SPHOTO = new Set(D.photos || []);
+const head  = id => SPHOTO.has(id) ? `img/headw/${SEASON}/${id}.webp` : `img/headw/${id}.webp`;
 /* "Luka Dončić" -> "L. Dončić". The payload's own short form is folded to ascii, which
    is fine for searching and wrong on a card. */
 const shortName = s => {

@@ -595,6 +595,11 @@ def main(label):
         "season": label, "champion": champ,
         "teams": out_teams, "players": out_players, "names": names,
         "nights": nights, "tail": tail_order, "leaders": leaders,
+        # Players with an official photo for THIS season (img/headw/<label>/). The
+        # template prefers it over the shared file, which last season's cards keep.
+        "photos": sorted(f[:-5] for f in os.listdir(os.path.join(HERE, "..", "img", "headw", label))
+                         if f.endswith(".webp"))
+                  if os.path.isdir(os.path.join(HERE, "..", "img", "headw", label)) else [],
         "counts": {"teams": len(out_teams), "players": len(out_players),
                    "playerPool": len(deck)},
     }
