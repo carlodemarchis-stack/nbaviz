@@ -1005,8 +1005,13 @@ function arcSvg(t){
     bal += g.res === 'W' ? 1 : -1;
     pts.push(bal); hi = Math.max(hi, bal); lo = Math.min(lo, bal);
   });
+  // The season is 82; before the NBA Cup group stage resolves in December only 80 are
+  // on the schedule, and saying "80 games" reads as the season's length.
+  const ofSeason = games.length < 82
+    ? `82 games, ${games.length} scheduled so far \u2014 the last ${82 - games.length} are set after the NBA Cup group stage in December`
+    : `${games.length} games`;
   if (!pts.length) return `<div class="box" style="color:var(--dim);font-size:12px">
-    Not played yet \u2014 ${games.length} games scheduled.</div>`;
+    Not played yet \u2014 ${ofSeason}.</div>`;
 
   const W = 1000, H = 260, mid = H / 2;
   /* Scaled to THIS club rather than to the deck. A team that never went past +12 used a
@@ -1097,7 +1102,8 @@ function arcSvg(t){
     <span><i class="dot" style="background:var(--win)"></i>peak <b>${sgn(hi)}</b></span>
     <span><i class="dot" style="background:var(--loss)"></i>low <b>${sgn(lo)}</b></span>
     <span>finished <b>${sgn(pts[pts.length-1])}</b></span>
-    <span style="margin-left:auto;color:var(--dim)">${games.length} games \u00b7 scale set by this club, \u00b1${SC}</span>
+    <span style="margin-left:auto;color:var(--dim)">${games.length < 82
+      ? `${games.length} of 82 games scheduled` : `${games.length} games`} \u00b7 scale set by this club, \u00b1${SC}</span>
   </div>`;
 }
 

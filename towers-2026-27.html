@@ -124,6 +124,9 @@ body.race #wrap,body.reg #wrap{display:flex;flex-direction:column}
 .rgc.w{background:color-mix(in srgb,var(--win) 70%,#000)}
 .rgc.l{background:color-mix(in srgb,var(--loss) 80%,#000)}
 .rgc.u{background:rgba(150,166,205,.1);color:rgba(232,236,245,.42)}
+/* Games 81-82 before December: not yet scheduled, so an outline with nothing inside it. */
+.rgc.tbd{background:none;box-shadow:inset 0 0 0 1px rgba(150,166,205,.28);
+  color:rgba(232,236,245,.38);font-weight:600}
 /* Point at a team's crest or letters and every other row goes quiet, so that one
    season stands alone. (Lighting its games inside the other rows as well was tried
    and dropped: it scattered the eye rather than focusing it.)
@@ -1045,9 +1048,14 @@ function setRaceTab(k){
   RACETAB = k; PREF.set('racetab', k);
   draw(); syncHash();
 }
+/* The season is 82 games whatever has been published: 2026-27 lists 80 until the NBA
+   Cup group stage sets each team's last two in December. Saying "of 80" reads as the
+   season's length, so the label always counts to 82 -- the slider itself can only go
+   as far as games that exist. */
 function gnoLabel(){
-  document.getElementById('gno').innerHTML = LASTG
-    ? `game <b>${G}</b> of ${MAXG}` : `<b>${MAXG}</b> games scheduled`;
+  const n = Math.max(MAXG, GAMES);
+  document.getElementById('gno').innerHTML = LASTG ? `game <b>${G}</b> of ${n}`
+    : MAXG < n ? `<b>${n}</b> games, ${MAXG} scheduled` : `<b>${n}</b> games scheduled`;
 }
 
 /* The record, with the larger of its two numbers in white -- wins for a winning team,
@@ -1060,9 +1068,11 @@ const recHtml = r => r.w > r.l ? `<b>${r.w}</b>-${r.l}`
 /* ---------- the regular season, every game ---------- */
 let REGROWS = {};
 function regHtml(){
-  const N = MAXG;
+  // Every row runs to 82. Games not yet on the schedule are drawn as TBD boxes rather
+  // than left out, so a row is a whole season from the first night.
+  const N = Math.max(MAXG, GAMES);
   REGROWS = {};
-  const ticks = [1, 10, 20, 30, 40, 50, 60, 70, 80].filter(v => v <= N)
+  const ticks = [1, 10, 20, 30, 40, 50, 60, 70, 80, 82].filter(v => v <= N)
     .map(v => `<span style="left:${((v - .5) / N * 100).toFixed(2)}%">${v}</span>`).join('');
   const axis = `<div class="rgaxis"><span></span><span></span><span></span><span></span>
     <div class="tx">${ticks}</div></div>`;
@@ -1071,7 +1081,8 @@ function regHtml(){
     REGROWS[r.t.abbr] = {r, games};
     const cells = Array.from({length: N}, (_, i) => {
       const g = games[i];
-      if (!g) return '<span class="rgc u"></span>';
+      if (!g) return `<span class="rgc tbd" title="Game ${i + 1}: date to be set after the
+        NBA Cup group stage, in December">TBD</span>`;
       // Past the slider, a game has not happened yet -- whatever the final result was.
       const k = i < G && g.res ? (g.res === 'W' ? 'w' : 'l') : 'u';
       return `<span class="rgc ${k}" data-i="${i}">${esc(String(g.opp || '').slice(0, 3))}</span>`;
