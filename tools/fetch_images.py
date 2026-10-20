@@ -145,6 +145,23 @@ def _webp(png_bytes, width=560, quality=82):
     return buf.getvalue()
 
 
+def _same_picture(webp_bytes, path, tol=30, share=0.01):
+    """Same photo, whatever encoder made the file? Compared by pixels, not bytes.
+
+    Bytes worked on one machine and failed on the next: GitHub's runner has a different
+    libwebp, so it re-encoded four unchanged photos into different bytes, called them
+    new, and stopped re-checking them -- Isaac Jones's real new photo would never have
+    been picked up. Under 1% of pixels off by more than 30/255 is the same picture."""
+    import io
+    from PIL import Image, ImageChops
+    a = Image.open(io.BytesIO(webp_bytes)).convert("RGBA")
+    b = Image.open(path).convert("RGBA")
+    if a.size != b.size:
+        return False
+    hist = ImageChops.difference(a, b).convert("L").histogram()
+    return sum(hist[tol:]) < share * a.size[0] * a.size[1]
+
+
 def nba_roster_photos(label):
     """This season's official headshots, kept apart from last season's.
 
@@ -238,7 +255,7 @@ def nba_roster_photos(label):
         except Exception as e:                       # noqa: BLE001
             return eid, name, f"FAIL {e}"[:70]
         base = os.path.join(IMG, "headw", f"{eid}.webp")
-        if os.path.exists(base) and open(base, "rb").read() == w:
+        if os.path.exists(base) and _same_picture(w, base):
             return eid, name, "same"
         with open(os.path.join(sdir, f"{eid}.webp"), "wb") as f:
             f.write(w)
