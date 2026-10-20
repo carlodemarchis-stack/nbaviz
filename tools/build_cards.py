@@ -151,6 +151,16 @@ def seeds(label):
         for c in n.get("children", []):
             walk(c)
     walk(json.load(open(raw)))
+    # A real seeding gives every place to exactly one team. Early on ESPN does not: right
+    # after opening night's first game every East team was "seeded 1" -- Boston too,
+    # at 0-1 -- and minutes later every 0-0 team shared 2nd. A conference whose seeds are
+    # not 1..N, once each, gets none until they are.
+    for conf in {t["conf"] for t in teams.values()}:
+        members = [ab for ab, t in teams.items() if t["conf"] == conf]
+        got = sorted(out[ab] for ab in members if ab in out)
+        if got != list(range(1, len(members) + 1)):
+            for ab in members:
+                out.pop(ab, None)
     return out
 
 
