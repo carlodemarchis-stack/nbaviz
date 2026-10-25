@@ -434,7 +434,7 @@ a{color:inherit}
 .jerseybox:hover .jteam .xl{border-bottom-color:currentColor}
 .rankno{position:absolute;top:8px;left:13px;pointer-events:none}
 .rankno b{display:block;font-weight:700;line-height:.82;color:rgba(232,236,245,.13);
-  font-variant-numeric:tabular-nums;letter-spacing:-.03em;font-size:clamp(26px,3.7vw,52px)}
+  font-variant-numeric:tabular-nums;letter-spacing:-.03em;font-size:clamp(38px,5.5vw,76px)}
 /* The total is the point of the rank, so it gets real size and real contrast; the word
    stays a caption underneath it. */
 .rankno em{display:block;margin-top:7px;padding-left:2px;font-style:normal;font-weight:700;
@@ -443,11 +443,12 @@ a{color:inherit}
 .rankno span{display:block;margin-top:4px;padding-left:2px;font-size:9px;
   letter-spacing:.17em;text-transform:uppercase;color:rgba(150,166,205,.42)}
 /* Bounded by the box's height AND its width -- the jersey is one or two digits, the rank
-   one to three (only rank 100 is three, and it gets a narrower budget inline). The
+   one to three, and its width budget is set inline by digit count so it never runs
+   into a two-digit jersey. The
    clamps above are the fallback without size container queries. */
 @supports (container-type: size){
   .jerseyno{font-size:min(74cqh, 42cqw)}
-  .rankno b{font-size:min(41cqh, var(--rw, 23cqw))}
+  .rankno b{font-size:min(41cqh, var(--rw, 30cqw))}
   .rankno em{font-size:min(9cqh, 6cqw)}
 }
 
@@ -735,7 +736,7 @@ kbd{font:inherit;font-size:11px;background:var(--pan);border:1px solid var(--lin
   #ctx,#credit{display:none}
   .jerseyno{font-size:min(68cqh,42cqw)}
   .jteam{font-size:10px}
-  .rankno b{font-size:min(41cqh, var(--rw, 23cqw))}
+  .rankno b{font-size:min(41cqh, var(--rw, 30cqw))}
   .rankno em{font-size:min(9cqh, 6cqw)}
   /* Hanging the close button outside the box puts it off the right edge of a phone. */
 }
@@ -1756,7 +1757,7 @@ function playerCard(p){
           </div>
         </div>
         <div class="shot">
-          <div class="rankno"${p.rank >= 100 ? ' style="--rw:16cqw"' : ''}>
+          <div class="rankno" style="--rw:${p.rank >= 100 ? 20 : p.rank >= 10 ? 30 : 40}cqw">
             <b>${p.rank}</b><em>${p.pts.toLocaleString('en-US')}</em><span>points</span></div>
           <div class="jerseybox" style="--tc:${winColor(t)};color:${winColor(t)}">
             ${p.jersey ? `<b class="jerseyno">${esc(p.jersey)}</b>` : ''}
