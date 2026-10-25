@@ -1106,7 +1106,7 @@ function arcSvg(t){
   <div class="mixlab" style="margin-top:4px">
     <span><i class="dot" style="background:var(--win)"></i>peak <b>${sgn(hi)}</b></span>
     <span><i class="dot" style="background:var(--loss)"></i>low <b>${sgn(lo)}</b></span>
-    <span>finished <b>${sgn(pts[pts.length-1])}</b></span>
+    <span>${SEASON_DONE ? 'finished' : 'now'} <b>${sgn(pts[pts.length-1])}</b></span>
     <span style="margin-left:auto;color:var(--dim)">${games.length < 82
       ? `${games.length} of 82 games scheduled` : `${games.length} games`} \u00b7 scale set by this club, \u00b1${SC}</span>
   </div>`;
@@ -1557,7 +1557,7 @@ function coverCard(){
     <div class="kick">A Guy With A Scarf · Season Film</div>
     <h1>The NBA ${SEASON} season,<br><em>card by card</em></h1>
     <p>${SEASON}, read end to end: the ${players} leading scorers, the charts that rank
-      them, then every franchise in order of record and the ladder they finished on.
+      them, then every franchise in order of record and the ladder ${SEASON_DONE ? 'they finished on' : 'as it stands'}.
       ${champ ? `<b>${tlink(champ.abbr, esc(champ.name))}</b> finished it as champions.` : ''}</p>
     <div class="cstat">
       <div><div class="v">${teams}</div><div class="k">Franchises</div></div>
@@ -2030,7 +2030,7 @@ function ladderCard(){
   return `<div class="in">
     <div class="kick">Chart · the ladder</div>
     <h2 style="font-size:clamp(19px,2.2vw,29px);font-weight:700;letter-spacing:-.02em">
-      How ${SEASON} finished</h2>
+      How ${SEASON} ${SEASON_DONE ? 'finished' : 'is going'}</h2>
     <p style="font-size:12px;color:var(--dim)">Conference seed, record and points margin.
       The dashed line is the play-in cut at tenth.</p>
     <div class="ladder">
